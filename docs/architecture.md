@@ -40,9 +40,11 @@ Protocol, slot map, timing windows and simulated rates: [vidbus.md](vidbus.md).
 9 column bits (`SDRAM_ROWBITS=12`, `Board_SDRAM_RowBits = 12`). Guest
 cores usually assume 13 row bits / 32 MB; the template drops
 `SDRAM_A[12]` and memory-size options must be capped at 16 MB. The fitted
-part is a Samsung K4S281632-UC60 (schematic); the timing macros in
-`cone_ext_support.tcl` are placeholders until checked against its
-datasheet (**unverified**).
+part is a Samsung K4S281632-UC60 (schematic). The macros in
+`cone_ext_support.tcl` follow the K4S281632F datasheet's -60 column: CL3
+(tCK >= 6 ns, no CL2 rating), tRCD 18 ns, tRP 18 ns, tRC 60 ns, tRDL 2
+CLK. Cores with their own controller set their own timing; the BBC
+core uses CL2 (`BLOCKED.md`).
 
 ## Clocks
 
