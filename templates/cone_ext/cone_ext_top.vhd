@@ -22,11 +22,17 @@ port (
 	clk14 : in std_logic;
 	clk28 : in std_logic;
 
--- vid bus to/from the 1k30. vid[3:0] and vid[13:11] are input-only.
-	vid : inout std_logic_vector(15 downto 0);
+-- vid bus to/from the 1k30 (cone_io.vhd header; input-only lines per the
+-- Quartus device database: 169009 for any other direction)
+	mux_clk : out std_logic;                     -- vid[14]
+	mux_sel : out unsigned(3 downto 0);          -- vid[15], vid[10:8]
+	mux_d : out unsigned(3 downto 0);            -- vid[7:4]
+	mux_q : in unsigned(3 downto 0);             -- vid[3:0]
+	vid_spare : in std_logic_vector(2 downto 0); -- vid[13:11]
 
--- mdb - board-wide data bus, left tri-stated
-	mdb : inout std_logic_vector(7 downto 0);
+-- mdb - board-wide data bus, owned by the 1k30/1k100; mdb[3:0] and
+-- mdb[7:5] are input-only locations, so the port is an input
+	mdb : in std_logic_vector(7 downto 0);
 
 -- SDRAM (16 MB, 12 row bits; nCS and CKE hardwired)
 	ram_clk : out std_logic;
@@ -68,12 +74,6 @@ architecture rtl of cone_ext_top is
 	signal reset : std_logic;
 	signal reset_n : std_logic;
 
--- vid-bus mux
-	signal mux_clk : std_logic;
-	signal mux_sel : unsigned(3 downto 0);
-	signal mux_d : unsigned(3 downto 0);
-	signal mux_q : unsigned(3 downto 0);
-
 -- LEDs
 	signal led_green : std_logic;
 	signal led_red : std_logic;
@@ -113,6 +113,9 @@ architecture rtl of cone_ext_top is
 	signal joy1 : std_logic_vector(demistify_joybits-1 downto 0);
 	signal joy2 : std_logic_vector(demistify_joybits-1 downto 0);
 
+-- SDRAM address from guest (13 bits; the extender wires A[11:0])
+	signal sdram_a : std_logic_vector(12 downto 0);
+
 -- Video from guest
 	signal vga_hsync, vga_vsync : std_logic;
 	signal vga_red, vga_green, vga_blue : std_logic_vector(7 downto 0);
@@ -148,19 +151,19 @@ begin
 	end process;
 
 -- -----------------------------------------------------------------------
--- vid-bus pin mapping (see cone_io.vhd header for the budget)
+-- vid bus to the 1k30 (pin budget and protocol: cone_io.vhd header)
 -- -----------------------------------------------------------------------
-	vid(14) <= mux_clk;
-	vid(7 downto 4) <= std_logic_vector(mux_d);
-	vid(10 downto 8) <= std_logic_vector(mux_sel(2 downto 0));
-	vid(15) <= mux_sel(3);
-	vid(3 downto 0) <= (others => 'Z');     -- input-only pins anyway
-	vid(13 downto 11) <= (others => 'Z');   -- input-only; spare status inputs
-	mux_q <= unsigned(vid(3 downto 0));
-
-	mdb <= (others => 'Z');
-
+	-- Link timing: mux_clk = clk_100 / (2 * MUX_DIV); q sampled Q_LAT
+	-- clk_100 cycles after each mux_clk rise, which tolerates a round trip
+	-- (extender -> 1k30 -> extender) of up to Q_LAT * 10 ns minus margin.
+	-- The board's round trip is not yet measured (BLOCKED.md); these values
+	-- leave room for one of up to ~19 ns. sim/tb_vidbus.vhd checks them.
 	myIO : entity work.cone_io
+	generic map (
+		MUX_DIV => 2,
+		Q_LAT => 2,
+		MISO_VISITS => 1
+	)
 	port map (
 		clk_mux => clk_100,
 		reset => reset,
@@ -196,13 +199,21 @@ begin
 		button_menu_n => menu_button_n
 	);
 
-	-- Joystick bit order expected by substitute_mcu: directions in the low
-	-- four bits, buttons at demistify_button1.. (active high).
-	joy1 <= (others => '0');
-	joy2 <= (others => '0');
-	-- TODO: map c64_joy1/2 (active low: fire2 fire1 right left down up)
-	-- into joy1/joy2 using demistify_button1/2 from demistify_config_pkg,
-	-- as chameleon_mergeinputs does. Left as zeros so the template compiles.
+	-- C-One ports -> substitute_mcu joystick words (active low, buttons at
+	-- the core's demistify_button1/2 positions).
+	mergeinputs : entity work.cone_mergeinputs
+	generic map (
+		joybits => demistify_joybits,
+		button1 => demistify_button1,
+		button2 => demistify_button2
+	)
+	port map (
+		clk => clk_100,
+		joy_a => c64_joy1,
+		joy_b => c64_joy2,
+		joy1_out => joy1,
+		joy2_out => joy2
+	);
 
 -- -----------------------------------------------------------------------
 -- Guest core
@@ -217,8 +228,7 @@ begin
 		LED => led_red,
 		-- SDRAM. Guest cores drive 13 address bits; A[12] has no pin.
 		SDRAM_DQ => ram_data,
-		SDRAM_A(11 downto 0) => ram_addr,
-		SDRAM_A(12) => open,
+		SDRAM_A => sdram_a,
 		SDRAM_DQML => ram_ldqm,
 		SDRAM_DQMH => ram_udqm,
 		SDRAM_nWE => ram_we_n,
@@ -248,6 +258,8 @@ begin
 		AUDIO_R => sigma_r
 	);
 
+	ram_addr <= sdram_a(11 downto 0);
+
 	-- VGA: extender has 5/6/5 bits and open-collector sync drivers.
 	red <= unsigned(vga_red(7 downto 3));
 	grn <= unsigned(vga_green(7 downto 2));
@@ -262,6 +274,7 @@ begin
 
 	controller : entity work.substitute_mcu
 	generic map (
+		joybits => demistify_joybits,
 		sysclk_frequency => 500,
 		debug => false,
 		jtag_uart => false,

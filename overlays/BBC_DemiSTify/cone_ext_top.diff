@@ -1,0 +1,35 @@
+--- cone_ext_top.vhd
++++ cone_ext_top.vhd
+@@ -1,5 +1,5 @@
+ -- -----------------------------------------------------------------------
+--- Toplevel template for the C-One FPGA Extender (DeMiSTify target "cone_ext")
++-- C-One FPGA Extender toplevel for the BBC Micro core (DeMiSTify cone_ext)
+ --
+ -- Derived from templates/chameleon64/chameleon64_top.vhd. The Chameleon's
+ -- CPLD mux is replaced by cone_io, which tunnels the same signal set over
+@@ -221,12 +221,14 @@
+ 	spi_do <= spi_miso when spi_ss4 = '0' else 'Z';
+ 	spi_fromguest <= spi_do;
+ 
+-	guest : component guest
++	guest : component bbc_mist_top
+ 	port map (
+-		CLOCK_27 => clk_27,            -- or clk_27&clk_27 for cores with a 2-bit CLOCK_27
++		CLOCK_27 => clk_27 & clk_27,
+ --		RESET_N => reset_n,
+ 		LED => led_red,
+-		-- SDRAM. Guest cores drive 13 address bits; A[12] has no pin.
++		-- SDRAM. Guest cores drive 13 address bits; A[12] has no pin. The
++		-- BBC map ends at 0xDFFFF (sdram.v row = addr[21:9]), so at most 11
++		-- row bits are used and A[12] is always 0.
+ 		SDRAM_DQ => ram_data,
+ 		SDRAM_A => sdram_a,
+ 		SDRAM_DQML => ram_ldqm,
+@@ -245,7 +247,6 @@
+ 		SPI_SCK => spi_clk_int,
+ 		SPI_SS2 => spi_ss2,
+ 		SPI_SS3 => spi_ss3,
+-		SPI_SS4 => spi_ss4,
+ 		CONF_DATA0 => conf_data0,
+ 		-- Video output
+ 		VGA_HS => vga_hsync,

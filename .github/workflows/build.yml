@@ -1,0 +1,215 @@
+name: build
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+  schedule:
+    # weekly, so the Quartus and toolchain caches never pass GitHub's 7-day eviction
+    - cron: "23 4 * * 1"
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+env:
+  ACTIONLINT_VERSION: "1.7.7"
+  QUARTUS_PREFIX: /opt/altera/13.1
+
+jobs:
+  lint:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: true
+
+      - name: apt cache
+        uses: actions/cache@v4
+        with:
+          path: ~/apt-cache
+          key: apt-ubuntu-22.04-${{ hashFiles('.github/apt-packages.txt') }}
+
+      - name: apt install
+        run: |
+          mkdir -p ~/apt-cache/partial
+          sudo apt-get update -qq
+          xargs -a .github/apt-packages.txt sudo apt-get install -y -qq --no-install-recommends \
+            -o Dir::Cache::Archives="$HOME/apt-cache"
+          sudo chown -R "$USER" ~/apt-cache
+          ghdl --version | head -1
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: requirements-dev.txt
+
+      - name: pip install
+        run: pip install -r requirements-dev.txt
+
+      - name: actionlint
+        run: scripts/get_actionlint.sh "$ACTIONLINT_VERSION"
+
+      - name: lint
+        run: LINT_NO_SIM=1 scripts/lint.sh
+
+      - name: simulation
+        run: scripts/sim.sh
+
+      - name: core firmware and generated toplevel (no Quartus)
+        run: scripts/build_core.sh --init-only
+
+      - name: unit tests
+        run: python -m pytest -n auto --cov=scripts --cov-fail-under=85 tests/
+
+      - name: sim logs
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: sim-logs
+          path: build/sim/logs/
+
+  gate:
+    needs: lint
+    if: >-
+      (github.event_name == 'push' && github.ref == 'refs/heads/main') ||
+      github.event_name == 'workflow_dispatch' || github.event_name == 'schedule'
+    runs-on: ubuntu-22.04
+    outputs:
+      mode: ${{ steps.gate.outputs.mode }}
+    steps:
+      # GITHUB_TOKEN cannot list self-hosted runners, so a registered runner
+      # labelled "quartus" is announced with the repo variable QUARTUS_SELF_HOSTED=true.
+      - id: gate
+        env:
+          SELF_HOSTED: ${{ vars.QUARTUS_SELF_HOSTED }}
+          HAS_URL: ${{ secrets.QUARTUS_INSTALLER_URL != '' }}
+        run: |
+          if [[ $SELF_HOSTED == true ]]; then
+            mode=self-hosted
+          elif [[ $HAS_URL == true ]]; then
+            mode=download
+          else
+            mode=skip
+            echo "synthesis skipped: no Quartus source configured" | tee -a "$GITHUB_STEP_SUMMARY"
+          fi
+          echo "mode=$mode" >> "$GITHUB_OUTPUT"
+
+  synth:
+    needs: gate
+    if: needs.gate.outputs.mode != 'skip'
+    runs-on: ${{ needs.gate.outputs.mode == 'self-hosted' && fromJSON('["self-hosted","quartus"]') || 'ubuntu-22.04' }}
+    timeout-minutes: 240
+    env:
+      DOWNLOAD: ${{ needs.gate.outputs.mode == 'download' }}
+    steps:
+      - name: free up runner disk
+        if: env.DOWNLOAD == 'true'
+        run: |
+          sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /usr/local/.ghcup
+          df -h /
+
+      - uses: actions/checkout@v4
+        with:
+          submodules: true
+
+      - name: prepare Quartus prefix
+        if: env.DOWNLOAD == 'true'
+        run: sudo mkdir -p "$QUARTUS_PREFIX" && sudo chown -R "$USER" "$(dirname "$QUARTUS_PREFIX")"
+
+      - name: Quartus cache
+        if: env.DOWNLOAD == 'true'
+        id: quartus-cache
+        uses: actions/cache@v4
+        with:
+          path: /opt/altera/13.1
+          key: quartus-13.1-${{ hashFiles('scripts/install_quartus.sh') }}
+          restore-keys: quartus-13.1-
+
+      - name: download installer
+        if: env.DOWNLOAD == 'true' && steps.quartus-cache.outputs.cache-hit != 'true'
+        env:
+          URLS: ${{ secrets.QUARTUS_INSTALLER_URL }}
+          TOKEN: ${{ secrets.QUARTUS_INSTALLER_TOKEN }}
+        # QUARTUS_INSTALLER_URL: whitespace-separated URLs, or name=URL pairs
+        # when the URL does not end in the file name (release asset API URLs).
+        run: |
+          for entry in $URLS; do
+            url=${entry#*=}
+            name=${entry%%=http*}
+            [[ $name == "$entry" ]] && name=$(basename "${url%%\?*}")
+            auth=()
+            [[ -n $TOKEN ]] && auth=(-H "Authorization: Bearer $TOKEN" -H "Accept: application/octet-stream")
+            curl -fSL --retry 3 "${auth[@]}" -o "reference/$name" "$url"
+          done
+          scripts/check_assets.sh
+
+      - name: install Quartus
+        if: env.DOWNLOAD == 'true'
+        run: |
+          if [[ "${{ steps.quartus-cache.outputs.cache-hit }}" == true ]]; then
+            scripts/install_quartus.sh --deps-only
+          else
+            scripts/install_quartus.sh
+          fi
+
+      - name: Quartus tree size
+        run: |
+          bytes=$(du -sb "$QUARTUS_PREFIX" | cut -f1)
+          echo "Quartus tree: $(numfmt --to=iec "$bytes")" | tee -a "$GITHUB_STEP_SUMMARY"
+          (( bytes <= 9 * 1024 ** 3 )) || { echo "::error::Quartus tree exceeds 9 GB"; exit 1; }
+
+      - name: toolchain build deps
+        run: sudo apt-get install -y -qq --no-install-recommends libncurses-dev
+
+      - name: EightThirtyTwo commit
+        id: e832
+        run: echo "sha=$(git -C DeMiSTify rev-parse HEAD:EightThirtyTwo)" >> "$GITHUB_OUTPUT"
+
+      - name: EightThirtyTwo toolchain cache
+        uses: actions/cache@v4
+        with:
+          path: |
+            DeMiSTify/EightThirtyTwo/vbcc
+            DeMiSTify/EightThirtyTwo/832a
+            DeMiSTify/EightThirtyTwo/832ocd
+            DeMiSTify/EightThirtyTwo/romgen
+            DeMiSTify/EightThirtyTwo/lib832
+            DeMiSTify/EightThirtyTwo/test.log
+          key: e832-${{ runner.os }}-${{ steps.e832.outputs.sha }}
+
+      - name: Quartus db cache
+        uses: actions/cache@v4
+        with:
+          path: |
+            cores/*/cone_ext/db
+            cores/*/cone_ext/incremental_db
+          key: qdb-${{ hashFiles('Board/**', 'templates/**', 'patches/**', 'cores/**/*.vhd', 'cores/**/*.v', 'cores/**/*.sv') }}
+          restore-keys: qdb-
+
+      - name: build
+        run: scripts/build_core.sh
+
+      - name: timing
+        run: |
+          mapfile -t reports < <(find cores -path '*/cone_ext/*' -name '*.sta.rpt')
+          ((${#reports[@]})) || { echo "::error::no .sta.rpt produced"; exit 1; }
+          python3 scripts/check_timing.py "${reports[@]}"
+
+      - name: artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: cone_ext-${{ github.sha }}
+          if-no-files-found: warn
+          path: |
+            cores/*/cone_ext/output_files/*.rbf
+            cores/*/cone_ext/output_files/*.fit.summary
+            cores/*/cone_ext/output_files/*.sta.rpt
+            cores/*/firmware/*.bin
+            build/cfcard/

@@ -1,0 +1,24 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Josh Bailey <josh@overlyspecific.com>
+Date: Fri, 16 Oct 2026 00:00:00 +0000
+Subject: [PATCH 1/3] demistify_config_pkg: define demistify_joybits
+
+Current DeMiSTify board templates size their joystick words with
+demistify_joybits.
+---
+ demistify_config_pkg.vhd | 2 ++
+ 1 file changed, 2 insertions(+)
+
+diff --git a/demistify_config_pkg.vhd b/demistify_config_pkg.vhd
+index 75edf04..58bd6b1 100644
+--- a/demistify_config_pkg.vhd
++++ b/demistify_config_pkg.vhd
+@@ -22,6 +22,8 @@ constant demistify_romsize2 : integer := 13; -- 8k for the second chunk, mirrore
+ -- Since Megadrive button B is the most important, we map button 1 -> B, button 2 -> C, button 3 -> A
+ -- and button 4 -> Start, hence button1 = 5, button2 = 6, button3 = 4 and button4 = 7,
+ 
++constant demistify_joybits : integer := 8;
++
+ constant demistify_button1 : integer := 4;
+ constant demistify_button2 : integer := 5;
+ constant demistify_button3 : integer := 6;

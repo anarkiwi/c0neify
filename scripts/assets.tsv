@@ -1,0 +1,18 @@
+name	kind	need	source	unblocks
+C1_extender.pin	text	required	iComp wiki, C-One page	pin verification (verify_pins.py)
+C1_extender_schem.pdf	pdf	required	iComp wiki, C-One page	audio DAC pins, SDRAM part number, nCS/CKE wiring
+Cone_core_development.pdf	pdf	required	Peter Wendrich, syntiac.com / iComp wiki	pin table, reconfiguration sequence
+A1k100.pin	text	required	iComp wiki, C-One page	1k100 support core pins
+A1k30.pin	text	required	iComp wiki, C-One page	1k30 mux slave pins
+Gbridge.tdf	text	required	iComp wiki, C-One page	1k100/1k30 gb[] bridge reference
+C1schematics.pdf	pdf	required	iComp wiki, C-One page	PS/2, CPLD and IDE/CF wiring on the main board
+C1minimigV201_source.zip	zip	required	iComp wiki, C-One page	protocol comparison with Minimig, support core sources
+C1minimigV201_build.zip	zip	required	iComp wiki, C-One page	prebuilt support.rbf / support.bin (make_cfcard.sh)
+NewbootV201.zip	zip	required	iComp wiki, File:NewbootV201.zip page, download link	NewBoot CF card layout
+QuartusSetupWeb-13.1.0.162.run	elf	required	Intel FPGA download centre, Archives, Quartus II Web Edition 13.1, Individual Files	synthesis (install_quartus.sh)
+cyclone_web-13.1.0.162.qdz	zip	required	Intel FPGA download centre, Archives, Quartus II Web Edition 13.1, Individual Files	Cyclone III device support for 13.1
+QuartusSetupWeb-13.0.1.232.run	elf	optional	Intel FPGA download centre, Archives, Quartus II Web Edition 13.0sp1, Individual Files	alternative to 13.1 (last with Cyclone II)
+cyclone_web-13.0.1.232.qdz	zip	optional	Intel FPGA download centre, Archives, Quartus II Web Edition 13.0sp1, Individual Files	Cyclone device support for 13.0sp1
+91sp2_quartus_free_linux.tar	tar	optional	Intel FPGA download centre, Archives, Quartus II Web Edition 9.1sp2	custom 1k30/1k100 cores (ACEX 1K)
+libpng12-0_1.2.54-1ubuntu1_i386.deb	deb	optional	packages.ubuntu.com, xenial, libpng12-0	Quartus 13.x GUI dependency
+K4S280432F-UC.PDF	pdf	optional	Samsung datasheet, SDRAM 128Mb F-die (x4, x8, x16)	SDRAM timing macros

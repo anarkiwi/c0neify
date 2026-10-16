@@ -1,0 +1,8 @@
+[submodule "DeMiSTify"]
+	path = DeMiSTify
+	url = https://github.com/robinsonb5/DeMiSTify
+	ignore = untracked
+[submodule "cores/BBC_DemiSTify"]
+	path = cores/BBC_DemiSTify
+	url = https://github.com/robinsonb5/BBC_DemiSTify
+	ignore = untracked
