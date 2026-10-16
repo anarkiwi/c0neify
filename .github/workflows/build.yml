@@ -74,6 +74,24 @@ jobs:
           name: sim-logs
           path: build/sim/logs/
 
+  acex:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Wine stage of the Quartus 9.0 image
+        run: docker build --target wine -f docker/quartus90/Dockerfile .
+
+      - name: ACEX 1K smoke builds
+        run: |
+          if scripts/check_assets.sh --require 90_quartus_free.exe >/dev/null 2>&1; then
+            scripts/build_acex.sh --out build/acex_smoke docker/quartus90/smoke ep1k30
+            scripts/build_acex.sh --out build/acex_smoke docker/quartus90/smoke ep1k100
+          else
+            echo "ACEX builds skipped: reference/90_quartus_free.exe absent" | tee -a "$GITHUB_STEP_SUMMARY"
+          fi
+
   gate:
     needs: lint
     if: >-

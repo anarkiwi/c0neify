@@ -13,6 +13,6 @@ QuartusSetupWeb-13.1.0.162.run	elf	required	Intel FPGA download centre, Archives
 cyclone_web-13.1.0.162.qdz	zip	required	Intel FPGA download centre, Archives, Quartus II Web Edition 13.1, Individual Files	Cyclone III device support for 13.1
 QuartusSetupWeb-13.0.1.232.run	elf	optional	Intel FPGA download centre, Archives, Quartus II Web Edition 13.0sp1, Individual Files	alternative to 13.1 (last with Cyclone II)
 cyclone_web-13.0.1.232.qdz	zip	optional	Intel FPGA download centre, Archives, Quartus II Web Edition 13.0sp1, Individual Files	Cyclone device support for 13.0sp1
-91sp2_quartus_free_linux.tar	tar	optional	Intel FPGA download centre, Archives, Quartus II Web Edition 9.1sp2	custom 1k30/1k100 cores (ACEX 1K)
+90_quartus_free.exe	exe	optional	Intel FPGA download centre, Archives, Quartus II Web Edition 9.0 (Windows)	ACEX 1K (1k30/1k100) builds (build_acex.sh)
 libpng12-0_1.2.54-1ubuntu1_i386.deb	deb	optional	packages.ubuntu.com, xenial, libpng12-0	Quartus 13.x GUI dependency
 K4S280432F-UC.PDF	pdf	optional	Samsung datasheet, SDRAM 128Mb F-die (x4, x8, x16)	SDRAM timing macros

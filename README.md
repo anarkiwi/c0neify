@@ -16,7 +16,8 @@ Board/cone_ext/        DeMiSTify board definition (pins, PLL, SDC, cone_mm_link,
 templates/cone_ext/    toplevel template (guest + substitute_mcu + link + SD-to-ATA bridge)
 fallback/              cone_io vid-bus mux, its 1k30 slave and testbench (not built)
 sim/                   tb_mmlink, 1k30/ATA models, altera_mf and DeMiSTify stubs for GHDL
-scripts/               lint, sim, asset checks, pin verification, Quartus install, CF card
+scripts/               lint, sim, asset checks, pin verification, Quartus install, ACEX builds, CF card
+docker/quartus90/      Quartus II 9.0 under Wine for the 1k30/1k100 (ACEX 1K), with a smoke project
 reference/             gated inputs (not committed), see reference/README.md
 docs/                  architecture and protocol documentation
 ```
@@ -28,11 +29,13 @@ scripts/lint.sh            # GHDL/verilator/shellcheck/black/pylint, pins if pre
 scripts/sim.sh             # simulation matrix (--no-sweep, --vidbus-sweep, --only REGEX)
 scripts/check_assets.sh    # which reference/ files are present
 scripts/build_core.sh      # toolchain, firmware, project, GHDL check, Quartus compile, CF card
+scripts/build_acex.sh DIR REV  # 1k30/1k100 compile with Quartus 9.0 under Wine in Docker
 python3 -m pytest -n auto tests/
 ```
 
 Requires `ghdl verilator shellcheck jq python3` (apt) and
-`pytest pytest-xdist pytest-cov black pylint` (pip).
+`pytest pytest-xdist pytest-cov black pylint tqdm` (pip); ACEX builds need
+Docker with BuildKit and `reference/90_quartus_free.exe`.
 
 ## Running on a C-One
 
@@ -52,6 +55,7 @@ the link and storage pass simulation but have not run on hardware yet.
 * [docs/protocol_decision.md](docs/protocol_decision.md): our vid-bus protocol vs Minimig's (option B, implemented)
 * [docs/vidbus.md](docs/vidbus.md): the fallback `cone_io` protocol
 * [docs/firmware.md](docs/firmware.md): toolchain, firmware, patch series, core build
+* [docs/acex_toolchain.md](docs/acex_toolchain.md): Quartus II 9.0 under Wine for the 1k30/1k100
 * [reference/README.md](reference/README.md): expected reference files and their sources
 * [BLOCKED.md](BLOCKED.md): what is missing and which file unblocks it
 

@@ -20,12 +20,12 @@ present; the list lives in `scripts/assets.tsv`.
 | `cyclone_web-13.1.0.162.qdz` | same Individual Files tab | Cyclone III/IV device support for 13.1 |
 | `QuartusSetupWeb-13.0.1.232.run` | Intel FPGA download centre: Archives, Quartus II Web Edition 13.0sp1, Individual Files tab | alternative toolchain |
 | `cyclone_web-13.0.1.232.qdz` | same Individual Files tab | Cyclone device support for 13.0sp1 |
-| `91sp2_quartus_free_linux.tar` (optional) | Intel FPGA download centre: Archives, Quartus II Web Edition 9.1sp2 | custom 1k30/1k100 (ACEX 1K) cores |
+| `90_quartus_free.exe` (optional) | Intel FPGA download centre: Archives, Quartus II Web Edition 9.0, Windows | ACEX 1K (1k30/1k100) builds (`scripts/build_acex.sh`, [docs/acex_toolchain.md](../docs/acex_toolchain.md)) |
 | `libpng12-0_1.2.54-1ubuntu1_i386.deb` (optional) | packages.ubuntu.com, xenial | Quartus 13.x GUI dependency |
 
 `check_assets.sh` reports each file as present, missing or invalid; a
 saved HTML page or a file whose leading bytes don't match its type
-(zip, PDF, ELF, tar, deb) counts as invalid.
+(zip, PDF, ELF, Windows exe, deb) counts as invalid.
 
 ## Quartus version
 
@@ -57,4 +57,5 @@ Support files missing from both the command line and
 ```
 5e950cb854c8584ba43fede650cded40e79534f1fa31ba43a7eb18d61f177ba9  QuartusSetupWeb-13.1.0.162.run
 7d65dfa5edf8965dc45b54f34c34b9eef2e7f3a9c293377b4dfe6a4e71845db6  cyclone_web-13.1.0.162.qdz
+31c251c8c9e61ed627bcae71af874e40da53bd1df461ad5d2fa747298faaeb5b  90_quartus_free.exe
 ```
