@@ -19,7 +19,7 @@
 --   vid[10:8]  out                       sel[2:0]
 --   vid[15]    out                       sel[3]
 --   vid[14]    out                       mux_clk
---   vid[13:11] IN only  unused, left undriven
+--   vid[13:11] IN only  unused (vid_spare at the toplevel)
 --
 -- Protocol (one slot per mux_clk period, MUX_DIV clk_mux cycles per half
 -- period):
@@ -73,7 +73,11 @@ entity cone_io is
 		clk_mux : in std_logic;              -- 100 MHz
 		reset : in std_logic;
 
-		vid : inout std_logic_vector(15 downto 0);
+		-- vid bus (top-level ports, see cone_ext_pins.tcl)
+		mux_clk : out std_logic;                 -- vid[14]
+		mux_sel : out unsigned(3 downto 0);      -- vid[15], vid[10:8]
+		mux_d : out unsigned(3 downto 0);        -- vid[7:4]
+		mux_q : in unsigned(3 downto 0);         -- vid[3:0], input-only
 
 		-- Raw SPI from substitute_mcu (SPI_EXTERNALCLK = true)
 		spi_cs_n : in std_logic;
@@ -143,6 +147,9 @@ architecture rtl of cone_io is
 	signal fall_req : std_logic := '0';
 	signal miso_cnt : natural range 0 to MISO_VISITS := 0;
 
+	-- led_green/led_red come from the guest's clock domain
+	signal led_meta, led_sync : std_logic_vector(1 downto 0) := "00";
+
 	-- Registered inputs
 	signal miso_reg : std_logic := '1';
 	signal cd_n_reg : std_logic := '1';
@@ -152,12 +159,9 @@ architecture rtl of cone_io is
 	signal reset_n_reg : std_logic := '1';
 	signal menu_n_reg : std_logic := '1';
 begin
-	vid(14) <= mux_clk_r;
-	vid(7 downto 4) <= std_logic_vector(d_r);
-	vid(10 downto 8) <= std_logic_vector(sel_r(2 downto 0));
-	vid(15) <= sel_r(3);
-	vid(3 downto 0) <= (others => 'Z');
-	vid(13 downto 11) <= (others => 'Z');
+	mux_clk <= mux_clk_r;
+	mux_sel <= sel_r;
+	mux_d <= d_r;
 
 	spi_raw_ack <= ack_r;
 	spi_miso <= miso_reg;
@@ -181,7 +185,9 @@ begin
 		variable sck, mosi, cs : std_logic;
 	begin
 		if rising_edge(clk_mux) then
-			q_in <= unsigned(vid(3 downto 0));
+			q_in <= mux_q;
+			led_meta <= led_red & led_green;
+			led_sync <= led_meta;
 			ack := ack_r;
 			fall := fall_pending;
 			cnt := miso_cnt;
@@ -267,7 +273,7 @@ begin
 								& ps2_keyboard_dat_out & ps2_keyboard_clk_out;
 						when 5 =>
 							sel_r <= SEL_MISC;
-							d_r <= "11" & led_red & led_green;
+							d_r <= "11" & unsigned(led_sync);
 						when others =>
 							sel_r <= to_unsigned(slot / 2 + 1, 4);
 							d_r <= X"F";

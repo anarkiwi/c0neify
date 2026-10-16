@@ -5,8 +5,9 @@ set_global_assignment -name VHDL_FILE ${boardpath}/cone_ext/gen_reset.vhd
 set_global_assignment -name QIP_FILE ${boardpath}/cone_ext/hostclocks.qip
 
 # 16 MB SDRAM on the extender: 128 Mbit x16, 12 row / 9 column bits.
-# Timings below are for a generic -7 part (e.g. MT48LC8M16A2-7E);
-# confirm against the chip fitted to your extender.
+# The fitted part is a Samsung K4S281632-UC60 (C1_extender_schem.pdf). The
+# timing values below are generic placeholders from the draft, not yet
+# checked against that part's datasheet (BLOCKED.md).
 set_global_assignment -name VERILOG_MACRO "SDRAM_WINBOND=0"
 set_global_assignment -name VERILOG_MACRO "SDRAM_ROWBITS=12"
 set_global_assignment -name VERILOG_MACRO "SDRAM_COLBITS=9"

@@ -6,6 +6,7 @@
 #   shell    bash -n + shellcheck on scripts/*.sh
 #   python   black --check + pylint on scripts/ and tests/
 #   actions  actionlint on .github/workflows when installed
+#   patches  patches/ regenerated from sources must match (submodules present)
 #   pins     verify_pins.py when reference/C1_extender.pin is present
 #   sim      scripts/sim.sh unless LINT_NO_SIM=1
 set -euo pipefail
@@ -45,6 +46,8 @@ for e in "${ENTITIES[@]}"; do
 	n=$((n + 1))
 	printf '[%d/%d] elaborate %s\n' "$n" "${#ENTITIES[@]}" "$e"
 	ghdl -m "${GHDL08[@]}" -Wno-binding "$e" >/dev/null
+	# mcode checks port widths and bounds only when the design initialises
+	ghdl -r "${GHDL08[@]}" -Wno-binding "$e" --stop-time=0ns --assert-level=error >/dev/null
 done
 
 step "GHDL: VHDL-93 analysis of 1k30-shared files"
@@ -71,6 +74,11 @@ if ((${#PY[@]})); then
 	pylint --score=n "${PY[@]}"
 fi
 
+if [[ -f DeMiSTify/COPYING && -f cores/BBC_DemiSTify/Makefile ]]; then
+	step "Patch series vs sources"
+	scripts/export_patches.sh --check
+fi
+
 if [[ -x build/tools/actionlint ]] || command -v actionlint >/dev/null; then
 	step "actionlint"
 	PATH=$ROOT/build/tools:$PATH actionlint
@@ -80,7 +88,8 @@ fi
 
 if [[ -f reference/C1_extender.pin ]]; then
 	step "Pins: C1_extender.pin vs cone_ext_pins.tcl"
-	python3 scripts/verify_pins.py reference/C1_extender.pin Board/cone_ext/cone_ext_pins.tcl
+	python3 scripts/verify_pins.py --strict --alias-file Board/cone_ext/pin_aliases.txt \
+		reference/C1_extender.pin Board/cone_ext/cone_ext_pins.tcl
 else
 	step "Pins: reference/C1_extender.pin absent, skipped"
 fi

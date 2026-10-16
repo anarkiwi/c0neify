@@ -2,10 +2,9 @@
 -- back over the 16 vid wires.
 --
 -- Wires carry transport delays: T_E2K_PS on mux_clk, T_E2K_PS + SKEW_PS on
--- sel/d, T_K2E_PS on q. vid[3:0] and vid[13:11] are input-only at the
--- extender: they are driven only from the 1k30 side (q) or by a weak
--- pull-up, and any extender drive on them shows up as 'X' or as a strong
--- level on a pulled-up line. Setup/hold windows of MARGIN_PS are checked at
+-- sel/d, T_K2E_PS on q. vid[3:0] and vid[13:11] are inputs at the extender
+-- (separate input ports); any 1k30 drive on an extender-driven line, or on
+-- the pulled-up vid[13:11], shows up as 'X' or a strong level. Setup/hold windows of MARGIN_PS are checked at
 -- both capture points (slave mux_clk rise, extender q sample).
 --
 -- Stimulus, all concurrent:
@@ -85,6 +84,8 @@ architecture sim of tb_vidbus is
 	signal running : boolean := false;
 
 	signal ext_vid, k30_vid : std_logic_vector(15 downto 0);
+	signal mux_clk : std_logic;
+	signal mux_sel, mux_d, mux_q : unsigned(3 downto 0);
 	-- slave-captured lines and extender-captured lines as whole signals
 	signal k30_seld : std_logic_vector(7 downto 0);
 	signal ext_q : std_logic_vector(3 downto 0);
@@ -179,10 +180,18 @@ begin
 	-- -------------------------------------------------------------------
 	-- Extender: cone_io + DeMiSTify SPI controller
 	-- -------------------------------------------------------------------
+	-- extender pins onto the vid wires (cone_ext_pins.tcl)
+	ext_vid(14) <= mux_clk;
+	ext_vid(15) <= mux_sel(3);
+	ext_vid(10 downto 8) <= std_logic_vector(mux_sel(2 downto 0));
+	ext_vid(7 downto 4) <= std_logic_vector(mux_d);
+	mux_q <= unsigned(to_x01(ext_vid(3 downto 0)));
+
 	dut_ext : entity work.cone_io
 	generic map (MUX_DIV => MUX_DIV, Q_LAT => Q_LAT, MISO_VISITS => MISO_VISITS)
 	port map (
-		clk_mux => clk_100, reset => reset, vid => ext_vid,
+		clk_mux => clk_100, reset => reset,
+		mux_clk => mux_clk, mux_sel => mux_sel, mux_d => mux_d, mux_q => mux_q,
 		spi_cs_n => spi_cs_n, spi_raw_clk => spi_sck, spi_raw_mosi => spi_mosi,
 		spi_raw_req => spi_req, spi_raw_ack => spi_ack, spi_miso => spi_miso,
 		mmc_cd_n => mmc_cd_n, mmc_wp => mmc_wp,

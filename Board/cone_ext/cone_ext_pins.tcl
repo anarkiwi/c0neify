@@ -45,8 +45,10 @@ set_location_assignment PIN_39 -to vsync_oc    ;# nVSync, drive '1' = line low
 
 # ---------------------------------------------------------------
 # SDRAM - 16 MB, 4 banks x 4096 rows x 512 cols x 16 bit (128 Mbit)
-# A0..A11 only (12 row bits). No nCS / CKE pins are listed in the
-# manual; assume hardwired active, as on the Chameleon.
+# A0..A11 only (12 row bits). reference/C1_extender_schem.pdf: U2 is a
+# Samsung K4S281632-UC60 ("128MBit SD-Ram ... 166 MHz type"); CKE is tied
+# to V33 and nCS to ground (with NC1/pin 36, "grounded for 256MBit
+# compatibility"), so neither has an FPGA pin.
 # ---------------------------------------------------------------
 set_location_assignment PIN_99  -to ram_clk
 set_location_assignment PIN_32  -to ram_ras_n
@@ -92,33 +94,45 @@ set_location_assignment PIN_120 -to ram_data[15]
 # RGB from the 1k30; once the extender is loaded they are the only
 # general-purpose link to the rest of the C-One, and therefore the
 # channel for keyboard, mouse, joysticks and CF/SD block traffic.
-#
-# INPUT-ONLY on the extender: vid[3:0] (pins 91..88 are the
-# EP3C25E144 CLK4..CLK7 dedicated clock inputs) and vid[13:11].
-# Bidirectional: vid[10:4], vid[14], vid[15]  (9 lines).
+# Port names follow cone_io (Chameleon convention); vid index and pin
+# from the manual's table; every location is also used by
+# reference/C1_extender.pin (Minimig names in brackets). Input-only
+# locations (vid[3:0], vid[13:11]) are confirmed by the Quartus 13.1
+# EP3C25E144 device database (fitter error 169009 for any other
+# direction).
 # ---------------------------------------------------------------
-set_location_assignment PIN_91 -to vid[0]     ;# IN only
-set_location_assignment PIN_90 -to vid[1]     ;# IN only
-set_location_assignment PIN_89 -to vid[2]     ;# IN only
-set_location_assignment PIN_88 -to vid[3]     ;# IN only
-set_location_assignment PIN_79 -to vid[4]
-set_location_assignment PIN_76 -to vid[5]
-set_location_assignment PIN_71 -to vid[6]
-set_location_assignment PIN_68 -to vid[7]
-set_location_assignment PIN_66 -to vid[8]
-set_location_assignment PIN_60 -to vid[9]
-set_location_assignment PIN_58 -to vid[10]
-set_location_assignment PIN_54 -to vid[11]    ;# IN only
-set_location_assignment PIN_53 -to vid[12]    ;# IN only
-set_location_assignment PIN_52 -to vid[13]    ;# IN only
-set_location_assignment PIN_46 -to vid[14]
-set_location_assignment PIN_43 -to vid[15]
+set_location_assignment PIN_91 -to mux_q[0]    ;# vid[0]  IN only [addbi[0]]
+set_location_assignment PIN_90 -to mux_q[1]    ;# vid[1]  IN only [addbi[1]]
+set_location_assignment PIN_89 -to mux_q[2]    ;# vid[2]  IN only [addbi[2]]
+set_location_assignment PIN_88 -to mux_q[3]    ;# vid[3]  IN only [addbi[3]]
+set_location_assignment PIN_79 -to mux_d[0]    ;# vid[4]  [addbo[0]]
+set_location_assignment PIN_76 -to mux_d[1]    ;# vid[5]  [addbo[1]]
+set_location_assignment PIN_71 -to mux_d[2]    ;# vid[6]  [addbo[2]]
+set_location_assignment PIN_68 -to mux_d[3]    ;# vid[7]  [addbo[3]]
+set_location_assignment PIN_66 -to mux_sel[0]  ;# vid[8]  [addbo[4]]
+set_location_assignment PIN_60 -to mux_sel[1]  ;# vid[9]  [addbo[5]]
+set_location_assignment PIN_58 -to mux_sel[2]  ;# vid[10] [addbo[6]]
+set_location_assignment PIN_54 -to vid_spare[0] ;# vid[11] IN only [sysclk]
+set_location_assignment PIN_53 -to vid_spare[1] ;# vid[12] IN only [addbi[4]]
+set_location_assignment PIN_52 -to vid_spare[2] ;# vid[13] IN only [addbi[5]]
+set_location_assignment PIN_46 -to mux_clk     ;# vid[14] [addbo[7]]
+set_location_assignment PIN_43 -to mux_sel[3]  ;# vid[15] [addbo[8]]
+
+# Every vid-bus line is registered in its I/O element so all of them
+# share the same clock-to-pin delay: sel/d are captured by the 1k30 on
+# mux_clk, so their skew against mux_clk eats the protocol's margin.
+set_instance_assignment -name FAST_OUTPUT_REGISTER ON -to mux_clk
+set_instance_assignment -name FAST_OUTPUT_REGISTER ON -to mux_sel[*]
+set_instance_assignment -name FAST_OUTPUT_REGISTER ON -to mux_d[*]
+set_instance_assignment -name FAST_INPUT_REGISTER ON -to mux_q[*]
 
 # ---------------------------------------------------------------
 # mdb[7:0] - the board-wide 8-bit data bus (SID, cartridge, SRAM,
 # CPLDs). Slow (<=8-10 MHz) and owned by the 1k30/1k100 at run time.
-# mdb[3:0] sit on CLK0..CLK3 (pins 25,24,23,22) so are input-only
-# on the extender. Keep tri-stated unless a core really needs it.
+# mdb[3:0] sit on CLK0..CLK3 (pins 25,24,23,22); they and mdb[7:5]
+# (pins 127..129) are input-only locations (Quartus device database),
+# so the port is an input. reference/C1_extender.pin uses the same
+# names and locations, all as inputs.
 # ---------------------------------------------------------------
 set_location_assignment PIN_25  -to mdb[0]    ;# IN only (CLK0)
 set_location_assignment PIN_24  -to mdb[1]    ;# IN only (CLK1)
@@ -130,16 +144,16 @@ set_location_assignment PIN_128 -to mdb[6]
 set_location_assignment PIN_129 -to mdb[7]
 
 # ---------------------------------------------------------------
-# NOT in the manual's table - take from C1_extender.pin / schematic:
-#   * audio DAC pins on the extender (the board has its own converter)
-#   * the "few global signals from the geek-port"
-#   * any SDRAM nCS / CKE if they are not hardwired
+# Audio: not in the manual's table. Locations from
+# reference/C1_extender.pin (sigma1 PIN_10, sigma2 PIN_11, outputs,
+# 3.3-V LVTTL, bank 1). reference/C1_extender_schem.pdf: sigma1/sigma2
+# are the "sigma-delta converters" Audio1/Audio2 (4n7 to ground, 10k and
+# 1uF in series) to the geek port's SID1_exaudio / SID2_exaudio, i.e.
+# the C-One's two SID external-audio inputs; their stereo placement is
+# set by the main board.
 # ---------------------------------------------------------------
-# Until the DAC pins are known the audio outputs are virtual, so the fitter
-# cannot auto-place them onto a pin that is wired to something else.
-# Replace these two lines with set_location_assignment from the .pin file.
-set_instance_assignment -name VIRTUAL_PIN ON -to sigma_l
-set_instance_assignment -name VIRTUAL_PIN ON -to sigma_r
+set_location_assignment PIN_10 -to sigma_l     ;# [sigma1]
+set_location_assignment PIN_11 -to sigma_r     ;# [sigma2]
 
 # I/O standard: the whole bank set is 3.3 V LVTTL on the extender.
 set_global_assignment -name STRATIX_DEVICE_IO_STANDARD "3.3-V LVTTL"

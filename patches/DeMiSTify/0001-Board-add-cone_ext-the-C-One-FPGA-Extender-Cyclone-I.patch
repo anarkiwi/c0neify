@@ -1,0 +1,1108 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Josh Bailey <josh@overlyspecific.com>
+Date: Fri, 16 Oct 2026 00:00:00 +0000
+Subject: [PATCH 1/2] Board: add cone_ext, the C-One FPGA Extender (Cyclone III
+ EP3C25E144C8)
+
+The extender reaches keyboard, mouse, joysticks and storage only through
+the 16 vid lines to the C-One's ACEX 1K30. cone_io multiplexes them in
+the manner of the Chameleon's CPLD mux so substitute_mcu is used with
+SPI_EXTERNALCLK. The 1k30 side and a simulation of the link are
+maintained in the cone-demistify project.
+---
+ Board/cone_ext/Board_Config.vhd     |   7 +
+ Board/cone_ext/board.mk             |   2 +
+ Board/cone_ext/cone_ext_defs.tcl    |   8 +
+ Board/cone_ext/cone_ext_opts.tcl    |  40 ++++
+ Board/cone_ext/cone_ext_pins.tcl    | 159 +++++++++++++++
+ Board/cone_ext/cone_ext_support.tcl |  21 ++
+ Board/cone_ext/cone_io.vhd          | 296 ++++++++++++++++++++++++++++
+ Board/cone_ext/cone_mergeinputs.vhd |  56 ++++++
+ Board/cone_ext/constraints.sdc      |  58 ++++++
+ Board/cone_ext/gen_reset.vhd        |  91 +++++++++
+ Board/cone_ext/hostclocks.qip       |   1 +
+ Board/cone_ext/hostclocks.vhd       | 175 ++++++++++++++++
+ Board/cone_ext/pin_aliases.txt      |  76 +++++++
+ 13 files changed, 990 insertions(+)
+ create mode 100644 Board/cone_ext/Board_Config.vhd
+ create mode 100644 Board/cone_ext/board.mk
+ create mode 100644 Board/cone_ext/cone_ext_defs.tcl
+ create mode 100644 Board/cone_ext/cone_ext_opts.tcl
+ create mode 100644 Board/cone_ext/cone_ext_pins.tcl
+ create mode 100644 Board/cone_ext/cone_ext_support.tcl
+ create mode 100644 Board/cone_ext/cone_io.vhd
+ create mode 100644 Board/cone_ext/cone_mergeinputs.vhd
+ create mode 100644 Board/cone_ext/constraints.sdc
+ create mode 100644 Board/cone_ext/gen_reset.vhd
+ create mode 100644 Board/cone_ext/hostclocks.qip
+ create mode 100644 Board/cone_ext/hostclocks.vhd
+ create mode 100644 Board/cone_ext/pin_aliases.txt
+
+diff --git a/Board/cone_ext/Board_Config.vhd b/Board/cone_ext/Board_Config.vhd
+new file mode 100644
+index 0000000..0f7721f
+--- /dev/null
++++ b/Board/cone_ext/Board_Config.vhd
+@@ -0,0 +1,7 @@
++package Board_Config is
++	constant Board_HaveSDRAM : boolean := true;
++	constant Board_SDRAM_RowBits : integer := 12;
++	constant Board_SDRAM_ColBits : integer := 9;
++	constant Board_VGA_Bits : integer := 5;
++	constant Board_JTAG_Uart : boolean := false;
++end package;
+diff --git a/Board/cone_ext/board.mk b/Board/cone_ext/board.mk
+new file mode 100644
+index 0000000..3debada
+--- /dev/null
++++ b/Board/cone_ext/board.mk
+@@ -0,0 +1,2 @@
++TOOL_MAKEFILE=quartus.mk
++TOOLPATH=$(QUARTUS_CYCLONEIII)
+diff --git a/Board/cone_ext/cone_ext_defs.tcl b/Board/cone_ext/cone_ext_defs.tcl
+new file mode 100644
+index 0000000..40a0c41
+--- /dev/null
++++ b/Board/cone_ext/cone_ext_defs.tcl
+@@ -0,0 +1,8 @@
++# C-One FPGA Extender - DeMiSTify board definition
++set have_sdram 1
++# Nominal frequency of the guest's CLOCK_27 input. The template feeds it
++# hostclocks c2 (27.09 MHz, derived from clk14), so guest PLLs generated for
++# 27 MHz are used unchanged. Set 28 only for a core whose own PLL has been
++# regenerated for the 28.37516 MHz crystal (see README "Clocks").
++set base_clock 27
++set fpga "CycloneIII"
+diff --git a/Board/cone_ext/cone_ext_opts.tcl b/Board/cone_ext/cone_ext_opts.tcl
+new file mode 100644
+index 0000000..a1e5fb9
+--- /dev/null
++++ b/Board/cone_ext/cone_ext_opts.tcl
+@@ -0,0 +1,40 @@
++# Device settings - same silicon as MiST and Chameleon V1
++set_global_assignment -name FAMILY "Cyclone III"
++set_global_assignment -name DEVICE EP3C25E144C8
++set_global_assignment -name DEVICE_FILTER_PACKAGE TQFP
++set_global_assignment -name DEVICE_FILTER_PIN_COUNT 144
++set_global_assignment -name DEVICE_FILTER_SPEED_GRADE 8
++set_global_assignment -name LAST_QUARTUS_VERSION 13.1
++
++set_global_assignment -name MIN_CORE_JUNCTION_TEMP 0
++set_global_assignment -name MAX_CORE_JUNCTION_TEMP 85
++
++# The 1k30 configures the extender in passive serial from extender.rbf,
++# so no configuration device, and reclaim the config pins as I/O.
++set_global_assignment -name USE_CONFIGURATION_DEVICE OFF
++set_global_assignment -name CYCLONEII_RESERVE_NCEO_AFTER_CONFIGURATION "USE AS REGULAR IO"
++set_global_assignment -name RESERVE_DATA0_AFTER_CONFIGURATION "USE AS REGULAR IO"
++set_global_assignment -name RESERVE_DATA1_AFTER_CONFIGURATION "USE AS REGULAR IO"
++set_global_assignment -name RESERVE_FLASH_NCE_AFTER_CONFIGURATION "USE AS REGULAR IO"
++set_global_assignment -name RESERVE_DCLK_AFTER_CONFIGURATION "USE AS REGULAR IO"
++set_global_assignment -name ON_CHIP_BITSTREAM_DECOMPRESSION ON
++set_global_assignment -name GENERATE_RBF_FILE ON
++set_global_assignment -name PROJECT_OUTPUT_DIRECTORY output_files
++
++set_global_assignment -name SMART_RECOMPILE ON
++set_global_assignment -name OPTIMIZE_HOLD_TIMING "ALL PATHS"
++set_global_assignment -name OPTIMIZE_MULTI_CORNER_TIMING ON
++set_global_assignment -name FITTER_EFFORT "STANDARD FIT"
++set_global_assignment -name ENABLE_CLOCK_LATENCY ON
++set_global_assignment -name PHYSICAL_SYNTHESIS_EFFORT NORMAL
++
++if {[info exists optimizeforspeed] && ($optimizeforspeed==1)} {
++	set_global_assignment -name CYCLONEII_OPTIMIZATION_TECHNIQUE SPEED
++} else {
++	set_global_assignment -name CYCLONEII_OPTIMIZATION_TECHNIQUE BALANCED
++}
++
++set_global_assignment -name PARTITION_NETLIST_TYPE SOURCE -section_id Top
++set_global_assignment -name PARTITION_FITTER_PRESERVATION_LEVEL PLACEMENT_AND_ROUTING -section_id Top
++set_global_assignment -name PARTITION_COLOR 16764057 -section_id Top
++set_instance_assignment -name PARTITION_HIERARCHY root_partition -to | -section_id Top
+diff --git a/Board/cone_ext/cone_ext_pins.tcl b/Board/cone_ext/cone_ext_pins.tcl
+new file mode 100644
+index 0000000..0b29ee7
+--- /dev/null
++++ b/Board/cone_ext/cone_ext_pins.tcl
+@@ -0,0 +1,159 @@
++# C-One FPGA Extender (Cyclone III EP3C25E144C8) pin assignments
++# for a DeMiSTify "cone_ext" board target.
++#
++# Source: Peter Wendrich, "C-One core development", section 13
++# (Pins and Signals), Ext. column, July 2010.
++# Cross-check against C1_extender.pin from the iComp wiki before first use:
++# that file is taken directly from the working Minimig Quartus project.
++#
++# Naming follows the DeMiSTify Chameleon convention (red/grn/blu,
++# ram_*, sigma_*) so the Chameleon templates port with minimal edits.
++
++# ---------------------------------------------------------------
++# Clocks (extender has its own crystals)
++# ---------------------------------------------------------------
++set_location_assignment PIN_55  -to clk14      ;# 14.31818 MHz (4x NTSC colour burst)
++set_location_assignment PIN_126 -to clk28      ;# 28.37516 MHz (PAL-derived)
++
++# ---------------------------------------------------------------
++# VGA - direct from extender. 5/6/5 bits.
++# ---------------------------------------------------------------
++set_location_assignment PIN_86 -to red[0]
++set_location_assignment PIN_85 -to red[1]
++set_location_assignment PIN_83 -to red[2]
++set_location_assignment PIN_80 -to red[3]
++set_location_assignment PIN_77 -to red[4]
++
++set_location_assignment PIN_72 -to grn[0]
++set_location_assignment PIN_69 -to grn[1]
++set_location_assignment PIN_67 -to grn[2]
++set_location_assignment PIN_65 -to grn[3]
++set_location_assignment PIN_64 -to grn[4]
++set_location_assignment PIN_59 -to grn[5]
++
++set_location_assignment PIN_49 -to blu[0]
++set_location_assignment PIN_51 -to blu[1]
++set_location_assignment PIN_50 -to blu[2]
++set_location_assignment PIN_44 -to blu[3]
++set_location_assignment PIN_42 -to blu[4]
++
++# Sync lines are shared with the 1k30 and are open-collector from the
++# extender side: drive the FPGA pin HIGH to pull the sync line LOW.
++# NewBoot tri-states the 1k30's sync outputs when it loads extender.rbf.
++set_location_assignment PIN_33 -to hsync_oc    ;# nHSync, drive '1' = line low
++set_location_assignment PIN_39 -to vsync_oc    ;# nVSync, drive '1' = line low
++
++# ---------------------------------------------------------------
++# SDRAM - 16 MB, 4 banks x 4096 rows x 512 cols x 16 bit (128 Mbit)
++# A0..A11 only (12 row bits). reference/C1_extender_schem.pdf: U2 is a
++# Samsung K4S281632-UC60 ("128MBit SD-Ram ... 166 MHz type"); CKE is tied
++# to V33 and nCS to ground (with NC1/pin 36, "grounded for 256MBit
++# compatibility"), so neither has an FPGA pin.
++# ---------------------------------------------------------------
++set_location_assignment PIN_99  -to ram_clk
++set_location_assignment PIN_32  -to ram_ras_n
++set_location_assignment PIN_144 -to ram_cas_n
++set_location_assignment PIN_143 -to ram_we_n
++set_location_assignment PIN_31  -to ram_ba_0
++set_location_assignment PIN_30  -to ram_ba_1
++set_location_assignment PIN_142 -to ram_ldqm
++set_location_assignment PIN_98  -to ram_udqm
++
++set_location_assignment PIN_8   -to ram_addr[0]
++set_location_assignment PIN_7   -to ram_addr[1]
++set_location_assignment PIN_6   -to ram_addr[2]
++set_location_assignment PIN_4   -to ram_addr[3]
++set_location_assignment PIN_119 -to ram_addr[4]
++set_location_assignment PIN_114 -to ram_addr[5]
++set_location_assignment PIN_112 -to ram_addr[6]
++set_location_assignment PIN_110 -to ram_addr[7]
++set_location_assignment PIN_103 -to ram_addr[8]
++set_location_assignment PIN_105 -to ram_addr[9]
++set_location_assignment PIN_28  -to ram_addr[10]
++set_location_assignment PIN_100 -to ram_addr[11]
++
++set_location_assignment PIN_121 -to ram_data[0]
++set_location_assignment PIN_125 -to ram_data[1]
++set_location_assignment PIN_132 -to ram_data[2]
++set_location_assignment PIN_133 -to ram_data[3]
++set_location_assignment PIN_135 -to ram_data[4]
++set_location_assignment PIN_136 -to ram_data[5]
++set_location_assignment PIN_137 -to ram_data[6]
++set_location_assignment PIN_141 -to ram_data[7]
++set_location_assignment PIN_87  -to ram_data[8]
++set_location_assignment PIN_106 -to ram_data[9]
++set_location_assignment PIN_104 -to ram_data[10]
++set_location_assignment PIN_101 -to ram_data[11]
++set_location_assignment PIN_111 -to ram_data[12]
++set_location_assignment PIN_113 -to ram_data[13]
++set_location_assignment PIN_115 -to ram_data[14]
++set_location_assignment PIN_120 -to ram_data[15]
++
++# ---------------------------------------------------------------
++# "vid" bus - the 16 lines to the 1k30. In bypass mode these carry
++# RGB from the 1k30; once the extender is loaded they are the only
++# general-purpose link to the rest of the C-One, and therefore the
++# channel for keyboard, mouse, joysticks and CF/SD block traffic.
++# Port names follow cone_io (Chameleon convention); vid index and pin
++# from the manual's table; every location is also used by
++# reference/C1_extender.pin (Minimig names in brackets). Input-only
++# locations (vid[3:0], vid[13:11]) are confirmed by the Quartus 13.1
++# EP3C25E144 device database (fitter error 169009 for any other
++# direction).
++# ---------------------------------------------------------------
++set_location_assignment PIN_91 -to mux_q[0]    ;# vid[0]  IN only [addbi[0]]
++set_location_assignment PIN_90 -to mux_q[1]    ;# vid[1]  IN only [addbi[1]]
++set_location_assignment PIN_89 -to mux_q[2]    ;# vid[2]  IN only [addbi[2]]
++set_location_assignment PIN_88 -to mux_q[3]    ;# vid[3]  IN only [addbi[3]]
++set_location_assignment PIN_79 -to mux_d[0]    ;# vid[4]  [addbo[0]]
++set_location_assignment PIN_76 -to mux_d[1]    ;# vid[5]  [addbo[1]]
++set_location_assignment PIN_71 -to mux_d[2]    ;# vid[6]  [addbo[2]]
++set_location_assignment PIN_68 -to mux_d[3]    ;# vid[7]  [addbo[3]]
++set_location_assignment PIN_66 -to mux_sel[0]  ;# vid[8]  [addbo[4]]
++set_location_assignment PIN_60 -to mux_sel[1]  ;# vid[9]  [addbo[5]]
++set_location_assignment PIN_58 -to mux_sel[2]  ;# vid[10] [addbo[6]]
++set_location_assignment PIN_54 -to vid_spare[0] ;# vid[11] IN only [sysclk]
++set_location_assignment PIN_53 -to vid_spare[1] ;# vid[12] IN only [addbi[4]]
++set_location_assignment PIN_52 -to vid_spare[2] ;# vid[13] IN only [addbi[5]]
++set_location_assignment PIN_46 -to mux_clk     ;# vid[14] [addbo[7]]
++set_location_assignment PIN_43 -to mux_sel[3]  ;# vid[15] [addbo[8]]
++
++# Every vid-bus line is registered in its I/O element so all of them
++# share the same clock-to-pin delay: sel/d are captured by the 1k30 on
++# mux_clk, so their skew against mux_clk eats the protocol's margin.
++set_instance_assignment -name FAST_OUTPUT_REGISTER ON -to mux_clk
++set_instance_assignment -name FAST_OUTPUT_REGISTER ON -to mux_sel[*]
++set_instance_assignment -name FAST_OUTPUT_REGISTER ON -to mux_d[*]
++set_instance_assignment -name FAST_INPUT_REGISTER ON -to mux_q[*]
++
++# ---------------------------------------------------------------
++# mdb[7:0] - the board-wide 8-bit data bus (SID, cartridge, SRAM,
++# CPLDs). Slow (<=8-10 MHz) and owned by the 1k30/1k100 at run time.
++# mdb[3:0] sit on CLK0..CLK3 (pins 25,24,23,22); they and mdb[7:5]
++# (pins 127..129) are input-only locations (Quartus device database),
++# so the port is an input. reference/C1_extender.pin uses the same
++# names and locations, all as inputs.
++# ---------------------------------------------------------------
++set_location_assignment PIN_25  -to mdb[0]    ;# IN only (CLK0)
++set_location_assignment PIN_24  -to mdb[1]    ;# IN only (CLK1)
++set_location_assignment PIN_23  -to mdb[2]    ;# IN only (CLK2)
++set_location_assignment PIN_22  -to mdb[3]    ;# IN only (CLK3)
++set_location_assignment PIN_13  -to mdb[4]
++set_location_assignment PIN_127 -to mdb[5]
++set_location_assignment PIN_128 -to mdb[6]
++set_location_assignment PIN_129 -to mdb[7]
++
++# ---------------------------------------------------------------
++# Audio: not in the manual's table. Locations from
++# reference/C1_extender.pin (sigma1 PIN_10, sigma2 PIN_11, outputs,
++# 3.3-V LVTTL, bank 1). reference/C1_extender_schem.pdf: sigma1/sigma2
++# are the "sigma-delta converters" Audio1/Audio2 (4n7 to ground, 10k and
++# 1uF in series) to the geek port's SID1_exaudio / SID2_exaudio, i.e.
++# the C-One's two SID external-audio inputs; their stereo placement is
++# set by the main board.
++# ---------------------------------------------------------------
++set_location_assignment PIN_10 -to sigma_l     ;# [sigma1]
++set_location_assignment PIN_11 -to sigma_r     ;# [sigma2]
++
++# I/O standard: the whole bank set is 3.3 V LVTTL on the extender.
++set_global_assignment -name STRATIX_DEVICE_IO_STANDARD "3.3-V LVTTL"
+diff --git a/Board/cone_ext/cone_ext_support.tcl b/Board/cone_ext/cone_ext_support.tcl
+new file mode 100644
+index 0000000..d597646
+--- /dev/null
++++ b/Board/cone_ext/cone_ext_support.tcl
+@@ -0,0 +1,21 @@
++set_global_assignment -name SDC_FILE ${boardpath}/cone_ext/constraints.sdc
++set_global_assignment -name VHDL_FILE ${boardpath}/cone_ext/cone_io.vhd
++set_global_assignment -name VHDL_FILE ${boardpath}/cone_ext/cone_mergeinputs.vhd
++set_global_assignment -name VHDL_FILE ${boardpath}/cone_ext/gen_reset.vhd
++set_global_assignment -name QIP_FILE ${boardpath}/cone_ext/hostclocks.qip
++
++# 16 MB SDRAM on the extender: 128 Mbit x16, 12 row / 9 column bits.
++# The fitted part is a Samsung K4S281632-UC60 (C1_extender_schem.pdf). The
++# timing values below are generic placeholders from the draft, not yet
++# checked against that part's datasheet (BLOCKED.md).
++set_global_assignment -name VERILOG_MACRO "SDRAM_WINBOND=0"
++set_global_assignment -name VERILOG_MACRO "SDRAM_ROWBITS=12"
++set_global_assignment -name VERILOG_MACRO "SDRAM_COLBITS=9"
++set_global_assignment -name VERILOG_MACRO "SDRAM_CL=3"
++set_global_assignment -name VERILOG_MACRO "SDRAM_tCKminCL2=10000"
++set_global_assignment -name VERILOG_MACRO "SDRAM_tRC=66000"
++set_global_assignment -name VERILOG_MACRO "SDRAM_tWR=2"
++set_global_assignment -name VERILOG_MACRO "SDRAM_tRP=15000"
++
++# Keyboard reaches the extender as PS/2 tunnelled over the vid bus.
++set_global_assignment -name VERILOG_MACRO "DEMISTIFY_PS2_KEYBOARD=1"
+diff --git a/Board/cone_ext/cone_io.vhd b/Board/cone_ext/cone_io.vhd
+new file mode 100644
+index 0000000..10ea7df
+--- /dev/null
++++ b/Board/cone_ext/cone_io.vhd
+@@ -0,0 +1,296 @@
++-- -----------------------------------------------------------------------
++-- cone_io.vhd
++--
++-- Extender-side half of the "vid bus" link between the C-One FPGA
++-- Extender (Cyclone III) and the ACEX 1K30 on the C-One main board.
++--
++-- The Extender has no I/O of its own. After NewBoot loads extender.rbf,
++-- the 16 vid[] lines that carried RGB in bypass mode become free, and
++-- they are the only channel to the keyboard, mouse, joysticks, SD/CF and
++-- CPLD-attached I/O. This module time-multiplexes everything over them,
++-- in the same spirit as chameleon_io.vhd does over the Chameleon's 4-bit
++-- CPLD mux, so a DeMiSTify toplevel sees the same signals it would on a
++-- Chameleon: PS/2 in/out, raw SPI with req/ack, joysticks, buttons, LEDs.
++--
++-- Line budget (extender view; input-only lines per the Wendrich manual,
++-- section 13, see cone_ext_pins.tcl):
++--   vid[3:0]   IN only  (CLK4..7 pins)   q    4 bits, 1k30 -> extender
++--   vid[7:4]   out                       d    4 bits, extender -> 1k30
++--   vid[10:8]  out                       sel[2:0]
++--   vid[15]    out                       sel[3]
++--   vid[14]    out                       mux_clk
++--   vid[13:11] IN only  unused (vid_spare at the toplevel)
++--
++-- Protocol (one slot per mux_clk period, MUX_DIV clk_mux cycles per half
++-- period):
++--   * The extender launches sel and d on the clk_mux edge that drives
++--     mux_clk LOW, giving the slave half a period of setup and hold.
++--   * The 1k30 slave, on the RISING edge of mux_clk, latches d into the
++--     output register selected by sel and drives q from the input register
++--     selected by sel. q holds until the next rising edge.
++--   * The extender samples q Q_LAT clk_mux cycles after the edge that drove
++--     mux_clk HIGH. q is valid at the extender from (rise + round trip) for
++--     one mux_clk period, so Q_LAT places the sample inside that window for
++--     the board's round-trip delay; Q_LAT = MUX_DIV samples on the falling
++--     edge.
++--
++-- Slot map (sel):
++--   0  SPI       d = {-, spi_cs_n, spi_mosi, spi_clk}   q = {-, cd_n, wp, miso}
++--   1  PS/2      d = {mdat_o, mclk_o, kdat_o, kclk_o}   q = {mdat_i, mclk_i, kdat_i, kclk_i}
++--   2  JOY A lo  d = -                                   q = {right, left, down, up}       (active low)
++--   3  JOY A hi  d = -                                   q = {-, -, fire2, fire1}          (active low)
++--   4  JOY B lo  d = -                                   q = {right, left, down, up}
++--   5  JOY B hi  d = -                                   q = {-, -, fire2, fire1}
++--   6  MISC      d = {-, -, led_red, led_green}          q = {-, -, menu_n, reset_n}
++--   7..15 reserved (IEC, SID writes, CPLD printer port, ...)
++-- Sequence: SPI, 1, SPI, 2, SPI, 3, SPI, 4, SPI, 5, SPI, 6 (12 slots).
++--
++-- SPI (substitute_mcu with SPI_EXTERNALCLK = true): every change of
++-- spi_raw_req asks for the current spi_raw_clk/spi_raw_mosi to reach the
++-- card, and spi_raw_ack := spi_raw_req tells the controller it has. The
++-- controller samples MISO when it raises SCK, so:
++--   * SCK high (rising edge, or the no-op request at the start of a byte)
++--     is acknowledged as soon as it is launched;
++--   * SCK low is acknowledged only after MISO_VISITS further SPI slots,
++--     launched after the falling edge, have returned q, so spi_miso
++--     reflects the card's response to that edge;
++--   * a spi_cs_n change is launched in an SPI slot of its own, after a
++--     pending rising edge and before a pending falling edge, so CS never
++--     changes in the same slot as SCK.
++-- -----------------------------------------------------------------------
++
++library IEEE;
++use IEEE.STD_LOGIC_1164.ALL;
++use IEEE.numeric_std.ALL;
++
++entity cone_io is
++	generic (
++		MUX_DIV : positive := 1;
++		Q_LAT : positive := 1;
++		MISO_VISITS : positive := 1
++	);
++	port (
++		clk_mux : in std_logic;              -- 100 MHz
++		reset : in std_logic;
++
++		-- vid bus (top-level ports, see cone_ext_pins.tcl)
++		mux_clk : out std_logic;                 -- vid[14]
++		mux_sel : out unsigned(3 downto 0);      -- vid[15], vid[10:8]
++		mux_d : out unsigned(3 downto 0);        -- vid[7:4]
++		mux_q : in unsigned(3 downto 0);         -- vid[3:0], input-only
++
++		-- Raw SPI from substitute_mcu (SPI_EXTERNALCLK = true)
++		spi_cs_n : in std_logic;
++		spi_raw_clk : in std_logic;
++		spi_raw_mosi : in std_logic;
++		spi_raw_req : in std_logic;
++		spi_raw_ack : out std_logic;
++		spi_miso : out std_logic;
++		mmc_cd_n : out std_logic;
++		mmc_wp : out std_logic;
++
++		-- PS/2
++		ps2_keyboard_clk_out : in std_logic;
++		ps2_keyboard_dat_out : in std_logic;
++		ps2_keyboard_clk_in : out std_logic;
++		ps2_keyboard_dat_in : out std_logic;
++		ps2_mouse_clk_out : in std_logic;
++		ps2_mouse_dat_out : in std_logic;
++		ps2_mouse_clk_in : out std_logic;
++		ps2_mouse_dat_in : out std_logic;
++
++		-- Joysticks, active low: (5)fire2 (4)fire1 (3)right (2)left (1)down (0)up
++		joystick1 : out unsigned(5 downto 0);
++		joystick2 : out unsigned(5 downto 0);
++
++		-- Misc
++		led_green : in std_logic;
++		led_red : in std_logic;
++		button_reset_n : out std_logic;
++		button_menu_n : out std_logic
++	);
++end entity;
++
++architecture rtl of cone_io is
++	constant SEL_SPI : unsigned(3 downto 0) := X"0";
++	constant SEL_PS2 : unsigned(3 downto 0) := X"1";
++	constant SEL_MISC : unsigned(3 downto 0) := X"6";
++	constant SLOTS : natural := 12;
++
++	-- One q sample request per mux_clk rising edge, delayed Q_LAT + 1
++	-- clk_mux cycles (Q_LAT to the sample instant, one for the input
++	-- register). after_fall marks SPI slots launched after a falling edge.
++	type tag_t is record
++		valid : std_logic;
++		sel : unsigned(3 downto 0);
++		after_fall : std_logic;
++	end record;
++	constant TAG_NONE : tag_t := ('0', X"F", '0');
++	type pipe_t is array (1 to Q_LAT + 1) of tag_t;
++
++	signal ph : natural range 0 to 2 * MUX_DIV - 1 := 0;
++	signal slot : natural range 0 to SLOTS - 1 := 0;
++	signal pipe : pipe_t := (others => TAG_NONE);
++	signal launch_after_fall : std_logic := '0';
++
++	signal mux_clk_r : std_logic := '0';
++	signal sel_r : unsigned(3 downto 0) := X"F";
++	signal d_r : unsigned(3 downto 0) := X"F";
++	signal q_in : unsigned(3 downto 0) := X"F";
++	attribute useioff : boolean;
++	attribute useioff of mux_clk_r, sel_r, d_r, q_in : signal is true;
++
++	-- SPI state as launched on the bus
++	signal sck_p, mosi_p, cs_p : std_logic := '1';
++	signal ack_r : std_logic := '0';
++	signal fall_pending : std_logic := '0';
++	signal fall_req : std_logic := '0';
++	signal miso_cnt : natural range 0 to MISO_VISITS := 0;
++
++	-- led_green/led_red come from the guest's clock domain
++	signal led_meta, led_sync : std_logic_vector(1 downto 0) := "00";
++
++	-- Registered inputs
++	signal miso_reg : std_logic := '1';
++	signal cd_n_reg : std_logic := '1';
++	signal wp_reg : std_logic := '0';
++	signal kclk_in_reg, kdat_in_reg, mclk_in_reg, mdat_in_reg : std_logic := '1';
++	signal joy1_reg, joy2_reg : unsigned(5 downto 0) := (others => '1');
++	signal reset_n_reg : std_logic := '1';
++	signal menu_n_reg : std_logic := '1';
++begin
++	mux_clk <= mux_clk_r;
++	mux_sel <= sel_r;
++	mux_d <= d_r;
++
++	spi_raw_ack <= ack_r;
++	spi_miso <= miso_reg;
++	mmc_cd_n <= cd_n_reg;
++	mmc_wp <= wp_reg;
++	ps2_keyboard_clk_in <= kclk_in_reg;
++	ps2_keyboard_dat_in <= kdat_in_reg;
++	ps2_mouse_clk_in <= mclk_in_reg;
++	ps2_mouse_dat_in <= mdat_in_reg;
++	joystick1 <= joy1_reg;
++	joystick2 <= joy2_reg;
++	button_reset_n <= reset_n_reg;
++	button_menu_n <= menu_n_reg;
++
++	process(clk_mux)
++		variable t : tag_t;
++		variable ack, fall : std_logic;
++		variable cnt : natural range 0 to MISO_VISITS;
++		variable req : std_logic;
++		variable pending : boolean;
++		variable sck, mosi, cs : std_logic;
++	begin
++		if rising_edge(clk_mux) then
++			q_in <= mux_q;
++			led_meta <= led_red & led_green;
++			led_sync <= led_meta;
++			ack := ack_r;
++			fall := fall_pending;
++			cnt := miso_cnt;
++
++			-- Consume the q sample for the slot whose request reached the
++			-- end of the pipeline.
++			t := pipe(Q_LAT + 1);
++			if t.valid = '1' then
++				case t.sel is
++					when SEL_SPI =>
++						miso_reg <= q_in(0);
++						wp_reg <= q_in(1);
++						cd_n_reg <= q_in(2);
++						if t.after_fall = '1' and fall = '1' then
++							if cnt = 1 then
++								ack := fall_req;
++								fall := '0';
++							else
++								cnt := cnt - 1;
++							end if;
++						end if;
++					when SEL_PS2 =>
++						kclk_in_reg <= q_in(0);
++						kdat_in_reg <= q_in(1);
++						mclk_in_reg <= q_in(2);
++						mdat_in_reg <= q_in(3);
++					when X"2" => joy1_reg(3 downto 0) <= q_in;
++					when X"3" => joy1_reg(5 downto 4) <= q_in(1 downto 0);
++					when X"4" => joy2_reg(3 downto 0) <= q_in;
++					when X"5" => joy2_reg(5 downto 4) <= q_in(1 downto 0);
++					when SEL_MISC =>
++						reset_n_reg <= q_in(0);
++						menu_n_reg <= q_in(1);
++					when others => null;
++				end case;
++			end if;
++
++			pipe(2 to Q_LAT + 1) <= pipe(1 to Q_LAT);
++			pipe(1) <= TAG_NONE;
++
++			if ph = MUX_DIV - 1 then
++				-- mux_clk rises on this edge: the slave captures sel/d.
++				mux_clk_r <= '1';
++				pipe(1) <= ('1', sel_r, launch_after_fall);
++			end if;
++
++			if ph = 2 * MUX_DIV - 1 then
++				-- mux_clk falls on this edge: launch the next slot.
++				ph <= 0;
++				mux_clk_r <= '0';
++				slot <= (slot + 1) mod SLOTS;
++				launch_after_fall <= '0';
++				if slot mod 2 = 0 then
++					sck := sck_p;
++					mosi := mosi_p;
++					cs := cs_p;
++					req := to_x01(spi_raw_req);
++					pending := req /= 'X' and req /= ack and fall = '0';
++					launch_after_fall <= fall;
++					if pending and spi_raw_clk = '1' then
++						sck := '1';
++						mosi := spi_raw_mosi;
++						ack := req;
++					elsif cs /= spi_cs_n then
++						cs := spi_cs_n;
++					elsif pending then
++						sck := '0';
++						mosi := spi_raw_mosi;
++						fall := '1';
++						fall_req <= req;
++						cnt := MISO_VISITS;
++					end if;
++					sck_p <= sck;
++					mosi_p <= mosi;
++					cs_p <= cs;
++					sel_r <= SEL_SPI;
++					d_r <= '1' & cs & mosi & sck;
++				else
++					case slot / 2 is
++						when 0 =>
++							sel_r <= SEL_PS2;
++							d_r <= ps2_mouse_dat_out & ps2_mouse_clk_out
++								& ps2_keyboard_dat_out & ps2_keyboard_clk_out;
++						when 5 =>
++							sel_r <= SEL_MISC;
++							d_r <= "11" & unsigned(led_sync);
++						when others =>
++							sel_r <= to_unsigned(slot / 2 + 1, 4);
++							d_r <= X"F";
++					end case;
++				end if;
++			else
++				ph <= ph + 1;
++			end if;
++
++			ack_r <= ack;
++			fall_pending <= fall;
++			miso_cnt <= cnt;
++
++			if reset = '1' then
++				fall_pending <= '0';
++				pipe <= (others => TAG_NONE);
++			end if;
++		end if;
++	end process;
++end architecture;
+diff --git a/Board/cone_ext/cone_mergeinputs.vhd b/Board/cone_ext/cone_mergeinputs.vhd
+new file mode 100644
+index 0000000..781964e
+--- /dev/null
++++ b/Board/cone_ext/cone_mergeinputs.vhd
+@@ -0,0 +1,56 @@
++-- -----------------------------------------------------------------------
++-- cone_mergeinputs.vhd
++--
++-- Maps the two C-One joystick ports into the joystick words expected by
++-- DeMiSTify's substitute_mcu (and by MiST guest cores): directions in bits
++-- 3..0 in the same up/down/left/right order as the C64 port, fire buttons
++-- at the core-specific positions demistify_button1/2 from
++-- demistify_config_pkg. Everything is active low on both sides, matching
++-- chameleon_mergeinputs and substitute_mcu's '1' defaults.
++--
++-- Input bit order (both ports): 5 fire2, 4 fire1, 3 right, 2 left, 1 down,
++-- 0 up. Plain VHDL-93 so the 1k30 side can share it.
++-- -----------------------------------------------------------------------
++
++library ieee;
++use ieee.std_logic_1164.all;
++use ieee.numeric_std.all;
++
++entity cone_mergeinputs is
++	generic (
++		joybits : integer := 8;
++		button1 : integer := 4;
++		button2 : integer := 5
++	);
++	port (
++		clk : in std_logic;
++		joy_a : in unsigned(5 downto 0);
++		joy_b : in unsigned(5 downto 0);
++		joy1_out : out std_logic_vector(joybits - 1 downto 0);
++		joy2_out : out std_logic_vector(joybits - 1 downto 0)
++	);
++end entity;
++
++architecture rtl of cone_mergeinputs is
++	function map_port(j : unsigned(5 downto 0)) return std_logic_vector is
++		variable r : std_logic_vector(joybits - 1 downto 0) := (others => '1');
++	begin
++		r(3 downto 0) := std_logic_vector(j(3 downto 0));
++		r(button1) := j(4);
++		r(button2) := j(5);
++		return r;
++	end function;
++begin
++	assert button1 >= 4 and button1 < joybits and button2 >= 4 and button2 < joybits
++		and button1 /= button2
++		report "cone_mergeinputs: button positions must be distinct and in 4..joybits-1"
++		severity failure;
++
++	process(clk)
++	begin
++		if rising_edge(clk) then
++			joy1_out <= map_port(joy_a);
++			joy2_out <= map_port(joy_b);
++		end if;
++	end process;
++end architecture;
+diff --git a/Board/cone_ext/constraints.sdc b/Board/cone_ext/constraints.sdc
+new file mode 100644
+index 0000000..f5ab329
+--- /dev/null
++++ b/Board/cone_ext/constraints.sdc
+@@ -0,0 +1,58 @@
++# C-One FPGA Extender timing constraints
++create_clock -name "clk28" -period 35.242ns [get_ports {clk28}]
++create_clock -name "clk14" -period 69.841ns [get_ports {clk14}]
++
++# Host PLL: hostclocks (clk14 -> c0 = 100 MHz vid-bus/SDRAM, c1 = 50 MHz
++# controller, c2 = 27 MHz guest CLOCK_27)
++set hostclk {clocks|pll|auto_generated|pll1|clk[1]}
++set supportclk {clocks|pll|auto_generated|pll1|clk[0]}
++
++create_generated_clock -name spiclk -source [get_pins ${hostclk}] -divide_by 4 [get_registers {substitute_mcu:controller|spi_controller:spi|sck}]
++create_generated_clock -name spiclkfast -source [get_pins ${supportclk}] -divide_by 4 [get_registers {substitute_mcu:controller|spi_controller:spi|sck}]
++
++derive_pll_clocks -create_base_clocks
++derive_clock_uncertainty
++
++# Pin groups for DeMiSTify's downstream constraints
++set RAM_CLK ram_clk
++set RAM_OUT {ram_data* ram_addr* ram_ba* ram_ras_n ram_cas_n ram_we_n ram_*dqm}
++set RAM_IN {ram_data*}
++
++set VGA_OUT {red* grn* blu* hsync_oc vsync_oc}
++
++set FALSE_OUT {sigma_l sigma_r}
++set FALSE_IN {mdb* vid_spare*}
++
++set_false_path -to [get_ports {ram_clk}]
++
++# vid-bus link to the 1k30 (clocked by the extender over vid[14])
++# Placeholder 0.5 ns delays as in DeMiSTify's chameleon64 constraints; the
++# board's real vid-bus delays are not known (BLOCKED.md).
++set_input_delay  0.5 -clock [get_clocks ${supportclk}] [get_ports {mux_q[*]}]
++set_output_delay 0.5 -clock [get_clocks ${supportclk}] [get_ports {mux_clk mux_sel[*] mux_d[*]}]
++
++# The guest's SPI_SCK is substitute_mcu's sck register, which the
++# divide-by-4 spiclk above stands in for. The selects and conf_data0 are
++# written by the controller CPU only while the SPI is idle (busy low), at
++# least one controller clock after the last SCK edge and before the next
++# trigger, so they are static with respect to spiclk; guests use them as
++# asynchronous resets of their SPI logic.
++set_false_path -from [get_registers {substitute_mcu:controller|spi_ss* substitute_mcu:controller|conf_data0}] -to [get_clocks {spiclk spiclkfast}]
++
++# spi_controller changes MOSI with the falling SCK step; the next rising
++# step needs a full req/ack handshake, and with SPI_EXTERNALCLK the ack
++# passes two synchroniser flops (substitute_mcu spi_ack_d, spi_ack_r), so
++# at least three controller cycles separate them. Two are allowed here.
++set_multicycle_path -setup -start 2 -from [get_registers {substitute_mcu:controller|spi_controller:spi|mosi}] -to [get_clocks {spiclk spiclkfast}]
++set_multicycle_path -hold -start 1 -from [get_registers {substitute_mcu:controller|spi_controller:spi|mosi}] -to [get_clocks {spiclk spiclkfast}]
++
++# LED levels from the guest clock domain enter cone_io through a two-flop
++# synchroniser; only its first stage is unconstrained.
++set_false_path -to [get_registers {*cone_io:*|led_meta[*]}]
++
++# JTAG (debug interface, if enabled)
++set_input_delay -clock altera_reserved_tck -clock_fall 3 altera_reserved_tdi
++set_input_delay -clock altera_reserved_tck -clock_fall 3 altera_reserved_tms
++set_output_delay -clock altera_reserved_tck 3 altera_reserved_tdo
++
++set topmodule guest|
+diff --git a/Board/cone_ext/gen_reset.vhd b/Board/cone_ext/gen_reset.vhd
+new file mode 100644
+index 0000000..107e987
+--- /dev/null
++++ b/Board/cone_ext/gen_reset.vhd
+@@ -0,0 +1,91 @@
++-- -----------------------------------------------------------------------
++--
++-- Syntiac VHDL support files.
++--
++-- -----------------------------------------------------------------------
++-- Copyright 2005-2009 by Peter Wendrich (pwsoft@syntiac.com)
++-- http://www.syntiac.com
++--
++-- This source file is free software: you can redistribute it and/or modify
++-- it under the terms of the GNU Lesser General Public License as published
++-- by the Free Software Foundation, either version 3 of the License, or
++-- (at your option) any later version.
++--
++-- This source file is distributed in the hope that it will be useful,
++-- but WITHOUT ANY WARRANTY; without even the implied warranty of
++-- MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++-- GNU General Public License for more details.
++--
++-- You should have received a copy of the GNU General Public License
++-- along with this program. If not, see <http://www.gnu.org/licenses/>.
++--
++-- -----------------------------------------------------------------------
++--
++-- Power-on reset circuit with manual reset button input.
++--
++-- -----------------------------------------------------------------------
++--
++-- reset = 1 (nreset = 0) on power-on or after pressing button. After
++-- resetCycles number of clocks have passed the reset line is released.
++-- If a longer reset period is required the enable input can be connected
++-- to a slow clock signal (like the video vertical blanking interrupt).
++-- The enable input should be one clock cycle high each video frame.
++-- Then resetCycles is specified in the number of video frames iso clock cycles.
++--
++-- Initial reset is only active after power-on. It will not be retriggered by
++-- the reset button.
++--
++-- If button is connected and set to '1' a new reset cycle if started.
++--
++-- -----------------------------------------------------------------------
++
++library IEEE;
++use IEEE.STD_LOGIC_1164.ALL;
++use IEEE.numeric_std.ALL;
++
++-- -----------------------------------------------------------------------
++
++entity gen_reset is
++	generic (
++		resetCycles: integer := 4095
++	);
++	port (
++		clk : in std_logic;
++		enable : in std_logic := '1';
++		
++		button : in std_logic := '0';
++		initial_reset : out std_logic;
++		reset : out std_logic;
++		nreset : out std_logic
++	);
++end entity;
++
++-- -----------------------------------------------------------------------
++
++architecture rtl of gen_reset is
++	signal cnt : integer range 0 to resetCycles := 0;
++	signal initial_nreset_reg : std_logic := '0';
++	signal nresetLoc : std_logic := '0';
++begin
++	initial_reset <= not initial_nreset_reg;
++	reset <= not nresetLoc;
++	nreset <= nresetLoc;
++
++	process(clk)
++	begin
++		if rising_edge(clk) then
++			nresetLoc <= '1';
++			if cnt < resetCycles then
++				nresetLoc <= '0';
++				if enable = '1' then
++					cnt <= cnt + 1;
++				end if;
++			else
++				initial_nreset_reg <= '1';
++			end if;
++			if button = '1' then
++				cnt <= 0;
++			end if;
++		end if;
++	end process;
++end architecture;
+diff --git a/Board/cone_ext/hostclocks.qip b/Board/cone_ext/hostclocks.qip
+new file mode 100644
+index 0000000..961e613
+--- /dev/null
++++ b/Board/cone_ext/hostclocks.qip
+@@ -0,0 +1 @@
++set_global_assignment -name VHDL_FILE [file join $::quartus(qip_path) "hostclocks.vhd"]
+diff --git a/Board/cone_ext/hostclocks.vhd b/Board/cone_ext/hostclocks.vhd
+new file mode 100644
+index 0000000..818cfb1
+--- /dev/null
++++ b/Board/cone_ext/hostclocks.vhd
+@@ -0,0 +1,175 @@
++-- hostclocks.vhd - host PLL for the C-One FPGA Extender
++--
++-- Input: clk14 = 14.31818 MHz crystal on the extender (pin 55).
++-- VCO = 14.31818 * 70 = 1002.27 MHz (Cyclone III VCO range 600..1300 MHz)
++--   c0 = VCO / 10 = 100.23 MHz   vid-bus mux clock, SDRAM
++--   c1 = VCO / 20 =  50.11 MHz   substitute_mcu (EightThirtyTwo) clock
++--   c2 = VCO / 37 =  27.09 MHz   feed to the guest's CLOCK_27 (+0.33 %)
++--
++-- If +0.33 % on the guest clock matters for a given core, regenerate the
++-- guest's own PLL for a 28.37516 MHz input instead (set base_clock 28)
++-- and drop c2. The generic set is the one the MegaWizard emits for a
++-- Cyclone III altpll (as in Board/chameleon64/hostclocks.vhd), with the
++-- component declared locally and without defaults: the declaration in
++-- altera_mf_components carries Stratix-style defaults (clkN_counter "G0"
++-- etc.) that stop Quartus from computing the Cyclone III PLL counters.
++
++library ieee;
++use ieee.std_logic_1164.all;
++library altera_mf;
++use altera_mf.all;
++
++entity hostclocks is
++	port (
++		inclk0 : in std_logic;
++		c0 : out std_logic;
++		c1 : out std_logic;
++		c2 : out std_logic;
++		locked : out std_logic
++	);
++end entity;
++
++architecture rtl of hostclocks is
++	component altpll
++		generic (
++			bandwidth_type : string;
++			compensate_clock : string;
++			intended_device_family : string;
++			lpm_hint : string;
++			lpm_type : string;
++			operation_mode : string;
++			pll_type : string;
++			inclk0_input_frequency : natural;
++			clk0_multiply_by : natural;
++			clk0_divide_by : natural;
++			clk0_duty_cycle : natural;
++			clk0_phase_shift : string;
++			clk1_multiply_by : natural;
++			clk1_divide_by : natural;
++			clk1_duty_cycle : natural;
++			clk1_phase_shift : string;
++			clk2_multiply_by : natural;
++			clk2_divide_by : natural;
++			clk2_duty_cycle : natural;
++			clk2_phase_shift : string;
++			port_inclk0 : string;
++			port_inclk1 : string;
++			port_areset : string;
++			port_locked : string;
++			port_clk0 : string;
++			port_clk1 : string;
++			port_clk2 : string;
++			port_activeclock : string;
++			port_clkbad0 : string;
++			port_clkbad1 : string;
++			port_clkloss : string;
++			port_clkswitch : string;
++			port_configupdate : string;
++			port_fbin : string;
++			port_pfdena : string;
++			port_phasecounterselect : string;
++			port_phasedone : string;
++			port_phasestep : string;
++			port_phaseupdown : string;
++			port_pllena : string;
++			port_scanaclr : string;
++			port_scanclk : string;
++			port_scanclkena : string;
++			port_scandata : string;
++			port_scandataout : string;
++			port_scandone : string;
++			port_scanread : string;
++			port_scanwrite : string;
++			port_clk3 : string;
++			port_clk4 : string;
++			port_clk5 : string;
++			port_clkena0 : string;
++			port_clkena1 : string;
++			port_clkena2 : string;
++			port_clkena3 : string;
++			port_clkena4 : string;
++			port_clkena5 : string;
++			port_extclk0 : string;
++			port_extclk1 : string;
++			port_extclk2 : string;
++			port_extclk3 : string;
++			self_reset_on_loss_lock : string;
++			width_clock : natural
++		);
++		port (
++			inclk : in std_logic_vector(1 downto 0);
++			clk : out std_logic_vector(4 downto 0);
++			locked : out std_logic
++		);
++	end component;
++
++	signal sub_wire : std_logic_vector(4 downto 0);
++begin
++	c0 <= sub_wire(0);
++	c1 <= sub_wire(1);
++	c2 <= sub_wire(2);
++
++	pll : altpll
++	generic map (
++		bandwidth_type => "AUTO",
++		compensate_clock => "CLK0",
++		intended_device_family => "Cyclone III",
++		lpm_hint => "CBX_MODULE_PREFIX=hostclocks",
++		lpm_type => "altpll",
++		operation_mode => "NORMAL",
++		pll_type => "AUTO",
++		inclk0_input_frequency => 69841,  -- picoseconds: 1/14.31818 MHz
++		clk0_multiply_by => 70, clk0_divide_by => 10, clk0_duty_cycle => 50, clk0_phase_shift => "0",
++		clk1_multiply_by => 70, clk1_divide_by => 20, clk1_duty_cycle => 50, clk1_phase_shift => "0",
++		clk2_multiply_by => 70, clk2_divide_by => 37, clk2_duty_cycle => 50, clk2_phase_shift => "0",
++		port_inclk0 => "PORT_USED",
++		port_inclk1 => "PORT_UNUSED",
++		port_areset => "PORT_UNUSED",
++		port_locked => "PORT_USED",
++		port_clk0 => "PORT_USED",
++		port_clk1 => "PORT_USED",
++		port_clk2 => "PORT_USED",
++		port_activeclock => "PORT_UNUSED",
++		port_clkbad0 => "PORT_UNUSED",
++		port_clkbad1 => "PORT_UNUSED",
++		port_clkloss => "PORT_UNUSED",
++		port_clkswitch => "PORT_UNUSED",
++		port_configupdate => "PORT_UNUSED",
++		port_fbin => "PORT_UNUSED",
++		port_pfdena => "PORT_UNUSED",
++		port_phasecounterselect => "PORT_UNUSED",
++		port_phasedone => "PORT_UNUSED",
++		port_phasestep => "PORT_UNUSED",
++		port_phaseupdown => "PORT_UNUSED",
++		port_pllena => "PORT_UNUSED",
++		port_scanaclr => "PORT_UNUSED",
++		port_scanclk => "PORT_UNUSED",
++		port_scanclkena => "PORT_UNUSED",
++		port_scandata => "PORT_UNUSED",
++		port_scandataout => "PORT_UNUSED",
++		port_scandone => "PORT_UNUSED",
++		port_scanread => "PORT_UNUSED",
++		port_scanwrite => "PORT_UNUSED",
++		port_clk3 => "PORT_UNUSED",
++		port_clk4 => "PORT_UNUSED",
++		port_clk5 => "PORT_UNUSED",
++		port_clkena0 => "PORT_UNUSED",
++		port_clkena1 => "PORT_UNUSED",
++		port_clkena2 => "PORT_UNUSED",
++		port_clkena3 => "PORT_UNUSED",
++		port_clkena4 => "PORT_UNUSED",
++		port_clkena5 => "PORT_UNUSED",
++		port_extclk0 => "PORT_UNUSED",
++		port_extclk1 => "PORT_UNUSED",
++		port_extclk2 => "PORT_UNUSED",
++		port_extclk3 => "PORT_UNUSED",
++		self_reset_on_loss_lock => "OFF",
++		width_clock => 5
++	)
++	port map (
++		inclk(0) => inclk0,
++		inclk(1) => '0',
++		clk => sub_wire,
++		locked => locked
++	);
++end architecture;
+diff --git a/Board/cone_ext/pin_aliases.txt b/Board/cone_ext/pin_aliases.txt
+new file mode 100644
+index 0000000..0b8798d
+--- /dev/null
++++ b/Board/cone_ext/pin_aliases.txt
+@@ -0,0 +1,76 @@
++# Our port names -> names used at the same location by the Minimig project
++# in reference/C1_extender.pin (Quartus II 9.1). Read by verify_pins.py.
++ram_addr[3] DRAM_ADDR[3]
++ram_addr[2] DRAM_ADDR[2]
++ram_addr[1] DRAM_ADDR[1]
++ram_addr[0] DRAM_ADDR[0]
++sigma_l sigma1
++sigma_r sigma2
++ram_addr[10] DRAM_ADDR[10]
++ram_ba_1 DRAM_BA_1
++ram_ba_0 DRAM_BA_0
++ram_ras_n DRAM_RAS_N
++hsync_oc nHSync
++vsync_oc nVSync
++blu[4] dac[15]
++mux_sel[3] addbo[8]
++blu[3] dac[14]
++mux_clk addbo[7]
++blu[0] dac[11]
++blu[2] dac[13]
++blu[1] dac[12]
++vid_spare[2] addbi[5]
++vid_spare[1] addbi[4]
++vid_spare[0] sysclk
++clk14 clk_14
++mux_sel[2] addbo[6]
++grn[5] dac[10]
++mux_sel[1] addbo[5]
++grn[4] dac[9]
++grn[3] dac[8]
++mux_sel[0] addbo[4]
++grn[2] dac[7]
++mux_d[3] addbo[3]
++grn[1] dac[6]
++mux_d[2] addbo[2]
++grn[0] dac[5]
++mux_d[1] addbo[1]
++red[4] dac[4]
++mux_d[0] addbo[0]
++red[3] dac[3]
++red[2] dac[2]
++red[1] dac[1]
++red[0] dac[0]
++ram_data[8] DRAM_DQ[8]
++mux_q[3] addbi[3]
++mux_q[2] addbi[2]
++mux_q[1] addbi[1]
++mux_q[0] addbi[0]
++ram_udqm DRAM_UDQM
++ram_clk DRAM_CLK
++ram_addr[11] DRAM_ADDR[11]
++ram_data[11] DRAM_DQ[11]
++ram_addr[8] DRAM_ADDR[8]
++ram_data[10] DRAM_DQ[10]
++ram_addr[9] DRAM_ADDR[9]
++ram_data[9] DRAM_DQ[9]
++ram_addr[7] DRAM_ADDR[7]
++ram_data[12] DRAM_DQ[12]
++ram_addr[6] DRAM_ADDR[6]
++ram_data[13] DRAM_DQ[13]
++ram_addr[5] DRAM_ADDR[5]
++ram_data[14] DRAM_DQ[14]
++ram_addr[4] DRAM_ADDR[4]
++ram_data[15] DRAM_DQ[15]
++ram_data[0] DRAM_DQ[0]
++ram_data[1] DRAM_DQ[1]
++clk28 clk_28
++ram_data[2] DRAM_DQ[2]
++ram_data[3] DRAM_DQ[3]
++ram_data[4] DRAM_DQ[4]
++ram_data[5] DRAM_DQ[5]
++ram_data[6] DRAM_DQ[6]
++ram_data[7] DRAM_DQ[7]
++ram_ldqm DRAM_LDQM
++ram_we_n DRAM_WE_N
++ram_cas_n DRAM_CAS_N

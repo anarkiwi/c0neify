@@ -13,15 +13,15 @@ use ieee.std_logic_1164.all;
 
 entity altpll is
 	generic (
-		intended_device_family : string := "Cyclone III";
+		intended_device_family : string := "NONE";
 		lpm_type : string := "altpll";
 		lpm_hint : string := "UNUSED";
 		operation_mode : string := "NORMAL";
 		pll_type : string := "AUTO";
 		bandwidth_type : string := "AUTO";
 		compensate_clock : string := "CLK0";
-		inclk0_input_frequency : natural := 0;
-		width_clock : natural := 5;
+		inclk0_input_frequency : natural;
+		width_clock : natural := 6;
 		clk0_multiply_by : natural := 1; clk0_divide_by : natural := 1;
 		clk0_duty_cycle : natural := 50; clk0_phase_shift : string := "0";
 		clk1_multiply_by : natural := 1; clk1_divide_by : natural := 1;
@@ -32,12 +32,46 @@ entity altpll is
 		clk3_duty_cycle : natural := 50; clk3_phase_shift : string := "0";
 		clk4_multiply_by : natural := 1; clk4_divide_by : natural := 1;
 		clk4_duty_cycle : natural := 50; clk4_phase_shift : string := "0";
+		clk5_multiply_by : natural := 1; clk5_divide_by : natural := 1;
+		clk5_duty_cycle : natural := 50; clk5_phase_shift : string := "0";
 		port_clk0 : string := "PORT_UNUSED";
 		port_clk1 : string := "PORT_UNUSED";
 		port_clk2 : string := "PORT_UNUSED";
 		port_clk3 : string := "PORT_UNUSED";
 		port_clk4 : string := "PORT_UNUSED";
+		port_clk5 : string := "PORT_UNUSED";
 		port_locked : string := "PORT_UNUSED";
+		port_activeclock : string := "PORT_UNUSED";
+		port_clkbad0 : string := "PORT_UNUSED";
+		port_clkbad1 : string := "PORT_UNUSED";
+		port_clkloss : string := "PORT_UNUSED";
+		port_clkswitch : string := "PORT_UNUSED";
+		port_configupdate : string := "PORT_UNUSED";
+		port_fbin : string := "PORT_UNUSED";
+		port_pfdena : string := "PORT_UNUSED";
+		port_phasecounterselect : string := "PORT_UNUSED";
+		port_phasedone : string := "PORT_UNUSED";
+		port_phasestep : string := "PORT_UNUSED";
+		port_phaseupdown : string := "PORT_UNUSED";
+		port_pllena : string := "PORT_UNUSED";
+		port_scanaclr : string := "PORT_UNUSED";
+		port_scanclk : string := "PORT_UNUSED";
+		port_scanclkena : string := "PORT_UNUSED";
+		port_scandata : string := "PORT_UNUSED";
+		port_scandataout : string := "PORT_UNUSED";
+		port_scandone : string := "PORT_UNUSED";
+		port_scanread : string := "PORT_UNUSED";
+		port_scanwrite : string := "PORT_UNUSED";
+		port_clkena0 : string := "PORT_UNUSED";
+		port_clkena1 : string := "PORT_UNUSED";
+		port_clkena2 : string := "PORT_UNUSED";
+		port_clkena3 : string := "PORT_UNUSED";
+		port_clkena4 : string := "PORT_UNUSED";
+		port_clkena5 : string := "PORT_UNUSED";
+		port_extclk0 : string := "PORT_UNUSED";
+		port_extclk1 : string := "PORT_UNUSED";
+		port_extclk2 : string := "PORT_UNUSED";
+		port_extclk3 : string := "PORT_UNUSED";
 		port_inclk0 : string := "PORT_USED";
 		port_inclk1 : string := "PORT_UNUSED";
 		port_areset : string := "PORT_UNUSED";
@@ -55,11 +89,11 @@ entity altpll is
 end entity;
 
 architecture behavioural of altpll is
-	type nat_array is array (0 to 4) of natural;
+	type nat_array is array (0 to 5) of natural;
 	constant mul : nat_array := (clk0_multiply_by, clk1_multiply_by,
-		clk2_multiply_by, clk3_multiply_by, clk4_multiply_by);
+		clk2_multiply_by, clk3_multiply_by, clk4_multiply_by, clk5_multiply_by);
 	constant div : nat_array := (clk0_divide_by, clk1_divide_by,
-		clk2_divide_by, clk3_divide_by, clk4_divide_by);
+		clk2_divide_by, clk3_divide_by, clk4_divide_by, clk5_divide_by);
 
 	constant T_IN : time := inclk0_input_frequency * 1 ps;
 
@@ -68,7 +102,7 @@ begin
 	assert inclk0_input_frequency > 0
 		report "altpll stub: inclk0_input_frequency must be set" severity failure;
 	assert clk0_phase_shift = "0" and clk1_phase_shift = "0" and clk2_phase_shift = "0"
-		and clk3_phase_shift = "0" and clk4_phase_shift = "0"
+		and clk3_phase_shift = "0" and clk4_phase_shift = "0" and clk5_phase_shift = "0"
 		report "altpll stub: phase shift is not modelled" severity warning;
 
 	locked <= lock_r;

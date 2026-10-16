@@ -2,3 +2,4 @@ ghdl
 verilator
 shellcheck
 jq
+libncurses-dev

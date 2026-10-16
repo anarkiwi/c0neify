@@ -22,11 +22,17 @@ port (
 	clk14 : in std_logic;
 	clk28 : in std_logic;
 
--- vid bus to/from the 1k30. vid[3:0] and vid[13:11] are input-only.
-	vid : inout std_logic_vector(15 downto 0);
+-- vid bus to/from the 1k30 (cone_io.vhd header; input-only lines per the
+-- Quartus device database: 169009 for any other direction)
+	mux_clk : out std_logic;                     -- vid[14]
+	mux_sel : out unsigned(3 downto 0);          -- vid[15], vid[10:8]
+	mux_d : out unsigned(3 downto 0);            -- vid[7:4]
+	mux_q : in unsigned(3 downto 0);             -- vid[3:0]
+	vid_spare : in std_logic_vector(2 downto 0); -- vid[13:11]
 
--- mdb - board-wide data bus, left tri-stated
-	mdb : inout std_logic_vector(7 downto 0);
+-- mdb - board-wide data bus, owned by the 1k30/1k100; mdb[3:0] and
+-- mdb[7:5] are input-only locations, so the port is an input
+	mdb : in std_logic_vector(7 downto 0);
 
 -- SDRAM (16 MB, 12 row bits; nCS and CKE hardwired)
 	ram_clk : out std_logic;
@@ -147,8 +153,6 @@ begin
 -- -----------------------------------------------------------------------
 -- vid bus to the 1k30 (pin budget and protocol: cone_io.vhd header)
 -- -----------------------------------------------------------------------
-	mdb <= (others => 'Z');
-
 	-- Link timing: mux_clk = clk_100 / (2 * MUX_DIV); q sampled Q_LAT
 	-- clk_100 cycles after each mux_clk rise, which tolerates a round trip
 	-- (extender -> 1k30 -> extender) of up to Q_LAT * 10 ns minus margin.
@@ -163,7 +167,10 @@ begin
 	port map (
 		clk_mux => clk_100,
 		reset => reset,
-		vid => vid,
+		mux_clk => mux_clk,
+		mux_sel => mux_sel,
+		mux_d => mux_d,
+		mux_q => mux_q,
 
 		spi_cs_n => mmc_cs,
 		spi_raw_clk => spi_clk,

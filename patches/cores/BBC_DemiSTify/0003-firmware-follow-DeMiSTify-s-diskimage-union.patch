@@ -1,0 +1,23 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Josh Bailey <josh@overlyspecific.com>
+Date: Fri, 16 Oct 2026 00:00:00 +0000
+Subject: [PATCH 3/3] firmware: follow DeMiSTify's diskimage union
+
+struct diskimage now holds the file as type.file (DeMiSTify f94b6b9).
+---
+ firmware/overrides.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/firmware/overrides.c b/firmware/overrides.c
+index e86090f..5038ee3 100644
+--- a/firmware/overrides.c
++++ b/firmware/overrides.c
+@@ -255,7 +255,7 @@ char *autoboot()
+ 	vhdname[0]=0;
+ 	loadsettings(CONFIG_SETTINGS_FILENAME);
+ 
+-	if(!diskimg[0].file.size)
++	if(!diskimg[0].type.file.size)
+ 	    diskimg_mount(bootvhd_name,0);
+ 	romtype=0;
+ 	if(!LoadROM(bootrom_name))
