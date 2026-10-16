@@ -175,5 +175,9 @@ def test_main_parse_errors(tmp_path, capsys):
 def test_board_tcl_parses():
     ours, virtual = vp.parse_tcl(BOARD_TCL)
     assert len(ours) == 82 and not virtual
-    assert ours["sigma_l"] == "10" and ours["mux_q[0]"] == "91"
+    assert (
+        ours["sigma_l"] == "10"
+        and ours["vid_ide_in[0]"] == "91"
+        and ours["vid_ioclk"] == "43"
+    )
     assert len(set(ours.values())) == len(ours)

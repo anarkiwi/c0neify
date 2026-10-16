@@ -5,33 +5,36 @@ Subject: [PATCH 1/2] Board: add cone_ext, the C-One FPGA Extender (Cyclone III
  EP3C25E144C8)
 
 The extender reaches keyboard, mouse, joysticks and storage only through
-the 16 vid lines to the C-One's ACEX 1K30. cone_io multiplexes them in
-the manner of the Chameleon's CPLD mux so substitute_mcu is used with
-SPI_EXTERNALCLK. The 1k30 side and a simulation of the link are
-maintained in the cone-demistify project.
+the 16 vid lines to the C-One's ACEX 1K30. cone_mm_link speaks the
+Minimig V2.01 link there, so Minimig's prebuilt 1k30/1k100 images are
+used unchanged, and cone_sd_ata answers substitute_mcu's SD commands
+with ATA transfers to the C-One's CF card through that link. Its
+simulation is maintained in the cone-demistify project.
 ---
  Board/cone_ext/Board_Config.vhd     |   7 +
  Board/cone_ext/board.mk             |   2 +
  Board/cone_ext/cone_ext_defs.tcl    |   8 +
  Board/cone_ext/cone_ext_opts.tcl    |  40 ++++
- Board/cone_ext/cone_ext_pins.tcl    | 159 +++++++++++++++
- Board/cone_ext/cone_ext_support.tcl |  21 ++
- Board/cone_ext/cone_io.vhd          | 296 ++++++++++++++++++++++++++++
- Board/cone_ext/cone_mergeinputs.vhd |  56 ++++++
- Board/cone_ext/constraints.sdc      |  58 ++++++
- Board/cone_ext/gen_reset.vhd        |  91 +++++++++
+ Board/cone_ext/cone_ext_pins.tcl    | 158 ++++++++++++
+ Board/cone_ext/cone_ext_support.tcl |  22 ++
+ Board/cone_ext/cone_mergeinputs.vhd |  56 +++++
+ Board/cone_ext/cone_mm_link.vhd     | 307 ++++++++++++++++++++++++
+ Board/cone_ext/cone_sd_ata.vhd      | 359 ++++++++++++++++++++++++++++
+ Board/cone_ext/constraints.sdc      |  73 ++++++
+ Board/cone_ext/gen_reset.vhd        |  91 +++++++
  Board/cone_ext/hostclocks.qip       |   1 +
- Board/cone_ext/hostclocks.vhd       | 175 ++++++++++++++++
- Board/cone_ext/pin_aliases.txt      |  76 +++++++
- 13 files changed, 990 insertions(+)
+ Board/cone_ext/hostclocks.vhd       | 175 ++++++++++++++
+ Board/cone_ext/pin_aliases.txt      |  76 ++++++
+ 14 files changed, 1375 insertions(+)
  create mode 100644 Board/cone_ext/Board_Config.vhd
  create mode 100644 Board/cone_ext/board.mk
  create mode 100644 Board/cone_ext/cone_ext_defs.tcl
  create mode 100644 Board/cone_ext/cone_ext_opts.tcl
  create mode 100644 Board/cone_ext/cone_ext_pins.tcl
  create mode 100644 Board/cone_ext/cone_ext_support.tcl
- create mode 100644 Board/cone_ext/cone_io.vhd
  create mode 100644 Board/cone_ext/cone_mergeinputs.vhd
+ create mode 100644 Board/cone_ext/cone_mm_link.vhd
+ create mode 100644 Board/cone_ext/cone_sd_ata.vhd
  create mode 100644 Board/cone_ext/constraints.sdc
  create mode 100644 Board/cone_ext/gen_reset.vhd
  create mode 100644 Board/cone_ext/hostclocks.qip
@@ -121,10 +124,10 @@ index 0000000..a1e5fb9
 +set_instance_assignment -name PARTITION_HIERARCHY root_partition -to | -section_id Top
 diff --git a/Board/cone_ext/cone_ext_pins.tcl b/Board/cone_ext/cone_ext_pins.tcl
 new file mode 100644
-index 0000000..0b29ee7
+index 0000000..5728eb8
 --- /dev/null
 +++ b/Board/cone_ext/cone_ext_pins.tcl
-@@ -0,0 +1,159 @@
+@@ -0,0 +1,158 @@
 +# C-One FPGA Extender (Cyclone III EP3C25E144C8) pin assignments
 +# for a DeMiSTify "cone_ext" board target.
 +#
@@ -220,38 +223,37 @@ index 0000000..0b29ee7
 +# "vid" bus - the 16 lines to the 1k30. In bypass mode these carry
 +# RGB from the 1k30; once the extender is loaded they are the only
 +# general-purpose link to the rest of the C-One, and therefore the
-+# channel for keyboard, mouse, joysticks and CF/SD block traffic.
-+# Port names follow cone_io (Chameleon convention); vid index and pin
-+# from the manual's table; every location is also used by
-+# reference/C1_extender.pin (Minimig names in brackets). Input-only
-+# locations (vid[3:0], vid[13:11]) are confirmed by the Quartus 13.1
-+# EP3C25E144 device database (fitter error 169009 for any other
-+# direction).
++# channel for keyboard, mouse, joysticks and CF block traffic.
++# Port names follow cone_mm_link (Minimig V2.01 link); vid index and
++# pin from the manual's table; every location and direction is the
++# one reference/C1_extender.pin uses (Minimig names in brackets).
++# Input-only locations (vid[3:0], vid[13:11]) are confirmed by the
++# Quartus 13.1 EP3C25E144 device database (fitter error 169009 for
++# any other direction).
 +# ---------------------------------------------------------------
-+set_location_assignment PIN_91 -to mux_q[0]    ;# vid[0]  IN only [addbi[0]]
-+set_location_assignment PIN_90 -to mux_q[1]    ;# vid[1]  IN only [addbi[1]]
-+set_location_assignment PIN_89 -to mux_q[2]    ;# vid[2]  IN only [addbi[2]]
-+set_location_assignment PIN_88 -to mux_q[3]    ;# vid[3]  IN only [addbi[3]]
-+set_location_assignment PIN_79 -to mux_d[0]    ;# vid[4]  [addbo[0]]
-+set_location_assignment PIN_76 -to mux_d[1]    ;# vid[5]  [addbo[1]]
-+set_location_assignment PIN_71 -to mux_d[2]    ;# vid[6]  [addbo[2]]
-+set_location_assignment PIN_68 -to mux_d[3]    ;# vid[7]  [addbo[3]]
-+set_location_assignment PIN_66 -to mux_sel[0]  ;# vid[8]  [addbo[4]]
-+set_location_assignment PIN_60 -to mux_sel[1]  ;# vid[9]  [addbo[5]]
-+set_location_assignment PIN_58 -to mux_sel[2]  ;# vid[10] [addbo[6]]
-+set_location_assignment PIN_54 -to vid_spare[0] ;# vid[11] IN only [sysclk]
-+set_location_assignment PIN_53 -to vid_spare[1] ;# vid[12] IN only [addbi[4]]
-+set_location_assignment PIN_52 -to vid_spare[2] ;# vid[13] IN only [addbi[5]]
-+set_location_assignment PIN_46 -to mux_clk     ;# vid[14] [addbo[7]]
-+set_location_assignment PIN_43 -to mux_sel[3]  ;# vid[15] [addbo[8]]
++set_location_assignment PIN_91 -to vid_ide_in[0]    ;# vid[0]  IN only [addbi[0]]
++set_location_assignment PIN_90 -to vid_ide_in[1]    ;# vid[1]  IN only [addbi[1]]
++set_location_assignment PIN_89 -to vid_ide_in[2]    ;# vid[2]  IN only [addbi[2]]
++set_location_assignment PIN_88 -to vid_ide_in[3]    ;# vid[3]  IN only [addbi[3]]
++set_location_assignment PIN_79 -to vid_ide_out[0]   ;# vid[4]  [addbo[0]]
++set_location_assignment PIN_76 -to vid_ide_out[1]   ;# vid[5]  [addbo[1]]
++set_location_assignment PIN_71 -to vid_ide_out[2]   ;# vid[6]  [addbo[2]]
++set_location_assignment PIN_68 -to vid_ide_out[3]   ;# vid[7]  [addbo[3]]
++set_location_assignment PIN_66 -to vid_ide_out[4]   ;# vid[8]  [addbo[4]]
++set_location_assignment PIN_60 -to vid_ide_out[5]   ;# vid[9]  [addbo[5]]
++set_location_assignment PIN_58 -to vid_spare_out    ;# vid[10] [addbo[6]]
++set_location_assignment PIN_54 -to vid_spare_in[0]  ;# vid[11] IN only [sysclk]
++set_location_assignment PIN_53 -to vid_spare_in[1]  ;# vid[12] IN only [addbi[4]]
++set_location_assignment PIN_52 -to vid_ser_in       ;# vid[13] IN only [addbi[5]]
++set_location_assignment PIN_46 -to vid_ser_out      ;# vid[14] [addbo[7]]
++set_location_assignment PIN_43 -to vid_ioclk        ;# vid[15] [addbo[8]]
 +
-+# Every vid-bus line is registered in its I/O element so all of them
-+# share the same clock-to-pin delay: sel/d are captured by the 1k30 on
-+# mux_clk, so their skew against mux_clk eats the protocol's margin.
-+set_instance_assignment -name FAST_OUTPUT_REGISTER ON -to mux_clk
-+set_instance_assignment -name FAST_OUTPUT_REGISTER ON -to mux_sel[*]
-+set_instance_assignment -name FAST_OUTPUT_REGISTER ON -to mux_d[*]
-+set_instance_assignment -name FAST_INPUT_REGISTER ON -to mux_q[*]
++# Link data lines are registered in their I/O elements so they share one
++# clock-to-pin delay against vid_ioclk (constraints.sdc).
++set_instance_assignment -name FAST_OUTPUT_REGISTER ON -to vid_ide_out[*]
++set_instance_assignment -name FAST_OUTPUT_REGISTER ON -to vid_ser_out
++set_instance_assignment -name FAST_INPUT_REGISTER ON -to vid_ide_in[*]
++set_instance_assignment -name FAST_INPUT_REGISTER ON -to vid_ser_in
 +
 +# ---------------------------------------------------------------
 +# mdb[7:0] - the board-wide 8-bit data bus (SID, cartridge, SRAM,
@@ -286,12 +288,13 @@ index 0000000..0b29ee7
 +set_global_assignment -name STRATIX_DEVICE_IO_STANDARD "3.3-V LVTTL"
 diff --git a/Board/cone_ext/cone_ext_support.tcl b/Board/cone_ext/cone_ext_support.tcl
 new file mode 100644
-index 0000000..8e5c2b1
+index 0000000..2d39a25
 --- /dev/null
 +++ b/Board/cone_ext/cone_ext_support.tcl
-@@ -0,0 +1,21 @@
+@@ -0,0 +1,22 @@
 +set_global_assignment -name SDC_FILE ${boardpath}/cone_ext/constraints.sdc
-+set_global_assignment -name VHDL_FILE ${boardpath}/cone_ext/cone_io.vhd
++set_global_assignment -name VHDL_FILE ${boardpath}/cone_ext/cone_mm_link.vhd
++set_global_assignment -name VHDL_FILE ${boardpath}/cone_ext/cone_sd_ata.vhd
 +set_global_assignment -name VHDL_FILE ${boardpath}/cone_ext/cone_mergeinputs.vhd
 +set_global_assignment -name VHDL_FILE ${boardpath}/cone_ext/gen_reset.vhd
 +set_global_assignment -name QIP_FILE ${boardpath}/cone_ext/hostclocks.qip
@@ -311,308 +314,6 @@ index 0000000..8e5c2b1
 +
 +# Keyboard reaches the extender as PS/2 tunnelled over the vid bus.
 +set_global_assignment -name VERILOG_MACRO "DEMISTIFY_PS2_KEYBOARD=1"
-diff --git a/Board/cone_ext/cone_io.vhd b/Board/cone_ext/cone_io.vhd
-new file mode 100644
-index 0000000..10ea7df
---- /dev/null
-+++ b/Board/cone_ext/cone_io.vhd
-@@ -0,0 +1,296 @@
-+-- -----------------------------------------------------------------------
-+-- cone_io.vhd
-+--
-+-- Extender-side half of the "vid bus" link between the C-One FPGA
-+-- Extender (Cyclone III) and the ACEX 1K30 on the C-One main board.
-+--
-+-- The Extender has no I/O of its own. After NewBoot loads extender.rbf,
-+-- the 16 vid[] lines that carried RGB in bypass mode become free, and
-+-- they are the only channel to the keyboard, mouse, joysticks, SD/CF and
-+-- CPLD-attached I/O. This module time-multiplexes everything over them,
-+-- in the same spirit as chameleon_io.vhd does over the Chameleon's 4-bit
-+-- CPLD mux, so a DeMiSTify toplevel sees the same signals it would on a
-+-- Chameleon: PS/2 in/out, raw SPI with req/ack, joysticks, buttons, LEDs.
-+--
-+-- Line budget (extender view; input-only lines per the Wendrich manual,
-+-- section 13, see cone_ext_pins.tcl):
-+--   vid[3:0]   IN only  (CLK4..7 pins)   q    4 bits, 1k30 -> extender
-+--   vid[7:4]   out                       d    4 bits, extender -> 1k30
-+--   vid[10:8]  out                       sel[2:0]
-+--   vid[15]    out                       sel[3]
-+--   vid[14]    out                       mux_clk
-+--   vid[13:11] IN only  unused (vid_spare at the toplevel)
-+--
-+-- Protocol (one slot per mux_clk period, MUX_DIV clk_mux cycles per half
-+-- period):
-+--   * The extender launches sel and d on the clk_mux edge that drives
-+--     mux_clk LOW, giving the slave half a period of setup and hold.
-+--   * The 1k30 slave, on the RISING edge of mux_clk, latches d into the
-+--     output register selected by sel and drives q from the input register
-+--     selected by sel. q holds until the next rising edge.
-+--   * The extender samples q Q_LAT clk_mux cycles after the edge that drove
-+--     mux_clk HIGH. q is valid at the extender from (rise + round trip) for
-+--     one mux_clk period, so Q_LAT places the sample inside that window for
-+--     the board's round-trip delay; Q_LAT = MUX_DIV samples on the falling
-+--     edge.
-+--
-+-- Slot map (sel):
-+--   0  SPI       d = {-, spi_cs_n, spi_mosi, spi_clk}   q = {-, cd_n, wp, miso}
-+--   1  PS/2      d = {mdat_o, mclk_o, kdat_o, kclk_o}   q = {mdat_i, mclk_i, kdat_i, kclk_i}
-+--   2  JOY A lo  d = -                                   q = {right, left, down, up}       (active low)
-+--   3  JOY A hi  d = -                                   q = {-, -, fire2, fire1}          (active low)
-+--   4  JOY B lo  d = -                                   q = {right, left, down, up}
-+--   5  JOY B hi  d = -                                   q = {-, -, fire2, fire1}
-+--   6  MISC      d = {-, -, led_red, led_green}          q = {-, -, menu_n, reset_n}
-+--   7..15 reserved (IEC, SID writes, CPLD printer port, ...)
-+-- Sequence: SPI, 1, SPI, 2, SPI, 3, SPI, 4, SPI, 5, SPI, 6 (12 slots).
-+--
-+-- SPI (substitute_mcu with SPI_EXTERNALCLK = true): every change of
-+-- spi_raw_req asks for the current spi_raw_clk/spi_raw_mosi to reach the
-+-- card, and spi_raw_ack := spi_raw_req tells the controller it has. The
-+-- controller samples MISO when it raises SCK, so:
-+--   * SCK high (rising edge, or the no-op request at the start of a byte)
-+--     is acknowledged as soon as it is launched;
-+--   * SCK low is acknowledged only after MISO_VISITS further SPI slots,
-+--     launched after the falling edge, have returned q, so spi_miso
-+--     reflects the card's response to that edge;
-+--   * a spi_cs_n change is launched in an SPI slot of its own, after a
-+--     pending rising edge and before a pending falling edge, so CS never
-+--     changes in the same slot as SCK.
-+-- -----------------------------------------------------------------------
-+
-+library IEEE;
-+use IEEE.STD_LOGIC_1164.ALL;
-+use IEEE.numeric_std.ALL;
-+
-+entity cone_io is
-+	generic (
-+		MUX_DIV : positive := 1;
-+		Q_LAT : positive := 1;
-+		MISO_VISITS : positive := 1
-+	);
-+	port (
-+		clk_mux : in std_logic;              -- 100 MHz
-+		reset : in std_logic;
-+
-+		-- vid bus (top-level ports, see cone_ext_pins.tcl)
-+		mux_clk : out std_logic;                 -- vid[14]
-+		mux_sel : out unsigned(3 downto 0);      -- vid[15], vid[10:8]
-+		mux_d : out unsigned(3 downto 0);        -- vid[7:4]
-+		mux_q : in unsigned(3 downto 0);         -- vid[3:0], input-only
-+
-+		-- Raw SPI from substitute_mcu (SPI_EXTERNALCLK = true)
-+		spi_cs_n : in std_logic;
-+		spi_raw_clk : in std_logic;
-+		spi_raw_mosi : in std_logic;
-+		spi_raw_req : in std_logic;
-+		spi_raw_ack : out std_logic;
-+		spi_miso : out std_logic;
-+		mmc_cd_n : out std_logic;
-+		mmc_wp : out std_logic;
-+
-+		-- PS/2
-+		ps2_keyboard_clk_out : in std_logic;
-+		ps2_keyboard_dat_out : in std_logic;
-+		ps2_keyboard_clk_in : out std_logic;
-+		ps2_keyboard_dat_in : out std_logic;
-+		ps2_mouse_clk_out : in std_logic;
-+		ps2_mouse_dat_out : in std_logic;
-+		ps2_mouse_clk_in : out std_logic;
-+		ps2_mouse_dat_in : out std_logic;
-+
-+		-- Joysticks, active low: (5)fire2 (4)fire1 (3)right (2)left (1)down (0)up
-+		joystick1 : out unsigned(5 downto 0);
-+		joystick2 : out unsigned(5 downto 0);
-+
-+		-- Misc
-+		led_green : in std_logic;
-+		led_red : in std_logic;
-+		button_reset_n : out std_logic;
-+		button_menu_n : out std_logic
-+	);
-+end entity;
-+
-+architecture rtl of cone_io is
-+	constant SEL_SPI : unsigned(3 downto 0) := X"0";
-+	constant SEL_PS2 : unsigned(3 downto 0) := X"1";
-+	constant SEL_MISC : unsigned(3 downto 0) := X"6";
-+	constant SLOTS : natural := 12;
-+
-+	-- One q sample request per mux_clk rising edge, delayed Q_LAT + 1
-+	-- clk_mux cycles (Q_LAT to the sample instant, one for the input
-+	-- register). after_fall marks SPI slots launched after a falling edge.
-+	type tag_t is record
-+		valid : std_logic;
-+		sel : unsigned(3 downto 0);
-+		after_fall : std_logic;
-+	end record;
-+	constant TAG_NONE : tag_t := ('0', X"F", '0');
-+	type pipe_t is array (1 to Q_LAT + 1) of tag_t;
-+
-+	signal ph : natural range 0 to 2 * MUX_DIV - 1 := 0;
-+	signal slot : natural range 0 to SLOTS - 1 := 0;
-+	signal pipe : pipe_t := (others => TAG_NONE);
-+	signal launch_after_fall : std_logic := '0';
-+
-+	signal mux_clk_r : std_logic := '0';
-+	signal sel_r : unsigned(3 downto 0) := X"F";
-+	signal d_r : unsigned(3 downto 0) := X"F";
-+	signal q_in : unsigned(3 downto 0) := X"F";
-+	attribute useioff : boolean;
-+	attribute useioff of mux_clk_r, sel_r, d_r, q_in : signal is true;
-+
-+	-- SPI state as launched on the bus
-+	signal sck_p, mosi_p, cs_p : std_logic := '1';
-+	signal ack_r : std_logic := '0';
-+	signal fall_pending : std_logic := '0';
-+	signal fall_req : std_logic := '0';
-+	signal miso_cnt : natural range 0 to MISO_VISITS := 0;
-+
-+	-- led_green/led_red come from the guest's clock domain
-+	signal led_meta, led_sync : std_logic_vector(1 downto 0) := "00";
-+
-+	-- Registered inputs
-+	signal miso_reg : std_logic := '1';
-+	signal cd_n_reg : std_logic := '1';
-+	signal wp_reg : std_logic := '0';
-+	signal kclk_in_reg, kdat_in_reg, mclk_in_reg, mdat_in_reg : std_logic := '1';
-+	signal joy1_reg, joy2_reg : unsigned(5 downto 0) := (others => '1');
-+	signal reset_n_reg : std_logic := '1';
-+	signal menu_n_reg : std_logic := '1';
-+begin
-+	mux_clk <= mux_clk_r;
-+	mux_sel <= sel_r;
-+	mux_d <= d_r;
-+
-+	spi_raw_ack <= ack_r;
-+	spi_miso <= miso_reg;
-+	mmc_cd_n <= cd_n_reg;
-+	mmc_wp <= wp_reg;
-+	ps2_keyboard_clk_in <= kclk_in_reg;
-+	ps2_keyboard_dat_in <= kdat_in_reg;
-+	ps2_mouse_clk_in <= mclk_in_reg;
-+	ps2_mouse_dat_in <= mdat_in_reg;
-+	joystick1 <= joy1_reg;
-+	joystick2 <= joy2_reg;
-+	button_reset_n <= reset_n_reg;
-+	button_menu_n <= menu_n_reg;
-+
-+	process(clk_mux)
-+		variable t : tag_t;
-+		variable ack, fall : std_logic;
-+		variable cnt : natural range 0 to MISO_VISITS;
-+		variable req : std_logic;
-+		variable pending : boolean;
-+		variable sck, mosi, cs : std_logic;
-+	begin
-+		if rising_edge(clk_mux) then
-+			q_in <= mux_q;
-+			led_meta <= led_red & led_green;
-+			led_sync <= led_meta;
-+			ack := ack_r;
-+			fall := fall_pending;
-+			cnt := miso_cnt;
-+
-+			-- Consume the q sample for the slot whose request reached the
-+			-- end of the pipeline.
-+			t := pipe(Q_LAT + 1);
-+			if t.valid = '1' then
-+				case t.sel is
-+					when SEL_SPI =>
-+						miso_reg <= q_in(0);
-+						wp_reg <= q_in(1);
-+						cd_n_reg <= q_in(2);
-+						if t.after_fall = '1' and fall = '1' then
-+							if cnt = 1 then
-+								ack := fall_req;
-+								fall := '0';
-+							else
-+								cnt := cnt - 1;
-+							end if;
-+						end if;
-+					when SEL_PS2 =>
-+						kclk_in_reg <= q_in(0);
-+						kdat_in_reg <= q_in(1);
-+						mclk_in_reg <= q_in(2);
-+						mdat_in_reg <= q_in(3);
-+					when X"2" => joy1_reg(3 downto 0) <= q_in;
-+					when X"3" => joy1_reg(5 downto 4) <= q_in(1 downto 0);
-+					when X"4" => joy2_reg(3 downto 0) <= q_in;
-+					when X"5" => joy2_reg(5 downto 4) <= q_in(1 downto 0);
-+					when SEL_MISC =>
-+						reset_n_reg <= q_in(0);
-+						menu_n_reg <= q_in(1);
-+					when others => null;
-+				end case;
-+			end if;
-+
-+			pipe(2 to Q_LAT + 1) <= pipe(1 to Q_LAT);
-+			pipe(1) <= TAG_NONE;
-+
-+			if ph = MUX_DIV - 1 then
-+				-- mux_clk rises on this edge: the slave captures sel/d.
-+				mux_clk_r <= '1';
-+				pipe(1) <= ('1', sel_r, launch_after_fall);
-+			end if;
-+
-+			if ph = 2 * MUX_DIV - 1 then
-+				-- mux_clk falls on this edge: launch the next slot.
-+				ph <= 0;
-+				mux_clk_r <= '0';
-+				slot <= (slot + 1) mod SLOTS;
-+				launch_after_fall <= '0';
-+				if slot mod 2 = 0 then
-+					sck := sck_p;
-+					mosi := mosi_p;
-+					cs := cs_p;
-+					req := to_x01(spi_raw_req);
-+					pending := req /= 'X' and req /= ack and fall = '0';
-+					launch_after_fall <= fall;
-+					if pending and spi_raw_clk = '1' then
-+						sck := '1';
-+						mosi := spi_raw_mosi;
-+						ack := req;
-+					elsif cs /= spi_cs_n then
-+						cs := spi_cs_n;
-+					elsif pending then
-+						sck := '0';
-+						mosi := spi_raw_mosi;
-+						fall := '1';
-+						fall_req <= req;
-+						cnt := MISO_VISITS;
-+					end if;
-+					sck_p <= sck;
-+					mosi_p <= mosi;
-+					cs_p <= cs;
-+					sel_r <= SEL_SPI;
-+					d_r <= '1' & cs & mosi & sck;
-+				else
-+					case slot / 2 is
-+						when 0 =>
-+							sel_r <= SEL_PS2;
-+							d_r <= ps2_mouse_dat_out & ps2_mouse_clk_out
-+								& ps2_keyboard_dat_out & ps2_keyboard_clk_out;
-+						when 5 =>
-+							sel_r <= SEL_MISC;
-+							d_r <= "11" & unsigned(led_sync);
-+						when others =>
-+							sel_r <= to_unsigned(slot / 2 + 1, 4);
-+							d_r <= X"F";
-+					end case;
-+				end if;
-+			else
-+				ph <= ph + 1;
-+			end if;
-+
-+			ack_r <= ack;
-+			fall_pending <= fall;
-+			miso_cnt <= cnt;
-+
-+			if reset = '1' then
-+				fall_pending <= '0';
-+				pipe <= (others => TAG_NONE);
-+			end if;
-+		end if;
-+	end process;
-+end architecture;
 diff --git a/Board/cone_ext/cone_mergeinputs.vhd b/Board/cone_ext/cone_mergeinputs.vhd
 new file mode 100644
 index 0000000..781964e
@@ -675,12 +376,690 @@ index 0000000..781964e
 +		end if;
 +	end process;
 +end architecture;
+diff --git a/Board/cone_ext/cone_mm_link.vhd b/Board/cone_ext/cone_mm_link.vhd
+new file mode 100644
+index 0000000..3609758
+--- /dev/null
++++ b/Board/cone_ext/cone_mm_link.vhd
+@@ -0,0 +1,307 @@
++-- -----------------------------------------------------------------------
++-- cone_mm_link.vhd
++--
++-- Extender side of the Minimig V2.01 C-One vid-bus link, so the prebuilt
++-- Minimig 1k30 image (support.bin, built from 1k30/acex.vhd) serves this
++-- core unchanged: IDE/CF register access, PS/2 keyboard and mouse, RS232
++-- TxD, both joysticks and the 1k30's serial audio DAC.
++--
++-- The link protocol, its cycle counts and slot order are Tobias Gubener's
++-- (Minimig C-One port, Copyright (c) 2008-2009 Tobias Gubener, GPL-3 or
++-- later). Citations are to C1minimigV201_source.zip: cfide.vhd (IDE
++-- tunnel), cyclone.vhd (serial slots, audio, joysticks), 1k30/acex.vhd
++-- (the 1k30 end). Copyright (c) 2026 Josh Bailey.
++--
++-- This program is free software: you can redistribute it and/or modify
++-- it under the terms of the GNU General Public License as published by
++-- the Free Software Foundation, either version 3 of the License, or
++-- (at your option) any later version.
++--
++-- Clocking (cfide.vhd:515-531): IOclk = clk / 2, toggled on rising clk
++-- edges. Everything below runs on the rising clk edge that raises IOclk
++-- ("tick"), where the inputs are sampled; the outputs computed there are
++-- re-registered on the falling clk edge while IOclk is high, so they
++-- change half a clk period after IOclk rises and the 1k30 samples them at
++-- the next IOclk rise (acex.vhd:86-87). Data the 1k30 launches at IOclk
++-- rise k is sampled at tick k+1, so the round trip (IOclk out to vid in)
++-- must stay below one IOclk period; all cycle counts assume that.
++--
++-- IDE port: hold ide_req high with the access fields stable; they are
++-- latched when the access starts. ide_ack pulses for one clk with
++-- ide_rdata valid (cfide.vhd:377, micro_state = setwaitend). cs0/cs1 are
++-- active high here and inverted onto the 1k30's ide1cs/ide2cs.
++--
++-- Joysticks (cyclone.vhd:206-222), active low:
++-- (5) fire2 (4) fire1 (3) right (2) left (1) down (0) up. The CPLD
++-- stream carries no second fire button, so fire2 is always '1'.
++-- -----------------------------------------------------------------------
++
++library ieee;
++use ieee.std_logic_1164.all;
++use ieee.numeric_std.all;
++
++entity cone_mm_link is
++	port (
++		clk : in std_logic;
++		reset : in std_logic;
++
++		-- vid bus (cone_ext_pins.tcl)
++		vid_ioclk : out std_logic;                      -- vid[15]
++		vid_ser_out : out std_logic;                    -- vid[14]
++		vid_ser_in : in std_logic;                      -- vid[13]
++		vid_ide_out : out std_logic_vector(5 downto 0); -- vid[9:4]
++		vid_ide_in : in std_logic_vector(3 downto 0);   -- vid[3:0]
++
++		-- IDE register access through the 1k30
++		ide_req : in std_logic;
++		ide_wr : in std_logic;
++		ide_cs0 : in std_logic;
++		ide_cs1 : in std_logic;
++		ide_reg : in std_logic_vector(2 downto 0);
++		ide_wdata : in std_logic_vector(15 downto 0);
++		ide_rdata : out std_logic_vector(15 downto 0);
++		ide_ack : out std_logic;
++
++		-- PS/2: *_out '0' pulls the 1k30's open-drain line low
++		ps2k_clk_out : in std_logic;
++		ps2k_dat_out : in std_logic;
++		ps2m_clk_out : in std_logic;
++		ps2m_dat_out : in std_logic;
++		ps2k_clk_in : out std_logic;
++		ps2k_dat_in : out std_logic;
++		ps2m_clk_in : out std_logic;
++		ps2m_dat_in : out std_logic;
++
++		txd : in std_logic;
++		rxd : out std_logic;
++		sync_ok : out std_logic;
++
++		joy_a : out unsigned(5 downto 0);
++		joy_b : out unsigned(5 downto 0);
++
++		-- 16-bit samples for the 1k30's serial DAC
++		audio_l : in std_logic_vector(15 downto 0);
++		audio_r : in std_logic_vector(15 downto 0)
++	);
++end entity;
++
++architecture rtl of cone_mm_link is
++	-- cfide.vhd:552,563 (close), :571 (first nibble), :595 (end gap)
++	constant WAIT_CLOSE : unsigned(3 downto 0) := to_unsigned(10, 4);
++	constant WAIT_READ : unsigned(3 downto 0) := to_unsigned(5, 4);
++	constant WAIT_END : unsigned(3 downto 0) := to_unsigned(5, 4);
++
++	type ide_state_t is (idle, ide1, set_addr, set_data1, set_data2, set_data3,
++		waitclose, read1, read2, read3, read4, setwaitend, waitend);
++	signal st : ide_state_t := idle;
++	signal ioclk : std_logic := '0';
++	signal wait_cnt : unsigned(3 downto 0) := (others => '0');
++	signal ide_next : std_logic_vector(5 downto 0) := (others => '1');
++	signal ide_in_q : std_logic_vector(3 downto 0) := (others => '1');
++	signal rdata : std_logic_vector(15 downto 0) := (others => '1');
++	signal acc_wr : std_logic := '0';
++	signal acc_sel : std_logic_vector(5 downto 0) := (others => '1');
++	signal acc_data : std_logic_vector(15 downto 0) := (others => '1');
++
++	signal ide_o : std_logic_vector(5 downto 0) := (others => '1');
++	signal ser_next, ser_o : std_logic := '1';
++	signal kmshift : std_logic_vector(8 downto 0) := (others => '1');
++	signal km_cnt : unsigned(3 downto 0) := (others => '0');
++	signal insync : unsigned(3 downto 0) := (others => '0');
++	signal locked : std_logic := '0';
++	signal c2mhz, c2mhz_d : std_logic := '0';
++	signal ioshift : std_logic := '1';
++	signal kb_clk, kb_dat, ms_clk, ms_dat, rx : std_logic := '1';
++
++	signal lrclk : std_logic := '0';
++	signal count : unsigned(4 downto 0) := (others => '0');
++	signal shift : std_logic_vector(16 downto 0) := (others => '0');
++	signal jshift : std_logic_vector(15 downto 0) := (others => '1');
++	signal ja, jb : unsigned(5 downto 0) := (others => '1');
++begin
++	vid_ioclk <= ioclk;
++	vid_ide_out <= ide_o;
++	vid_ser_out <= ser_o;
++	ide_rdata <= rdata;
++	sync_ok <= locked;
++	ps2k_clk_in <= kb_clk;
++	ps2k_dat_in <= kb_dat;
++	ps2m_clk_in <= ms_clk;
++	ps2m_dat_in <= ms_dat;
++	rxd <= rx;
++	joy_a <= ja;
++	joy_b <= jb;
++
++	-- cfide.vhd:517-520, cyclone.vhd:99-102
++	process(clk)
++	begin
++		if falling_edge(clk) then
++			if ioclk = '1' then
++				ide_o <= ide_next;
++				ser_o <= ser_next;
++			end if;
++		end if;
++	end process;
++
++	process(clk)
++	begin
++		if rising_edge(clk) then
++			ioclk <= not ioclk;
++			ide_ack <= '0';
++			if ioclk = '0' then
++				-- IDE tunnel, cfide.vhd:527-603
++				wait_cnt <= wait_cnt - 1;
++				st <= idle;
++				ide_next <= (others => '1');
++				ide_in_q <= vid_ide_in;
++				case st is
++					when idle =>
++						if ide_req = '1' then
++							acc_wr <= ide_wr;
++							acc_sel <= not ide_cs1 & not ide_cs0 & '0' & ide_reg;
++							acc_data <= ide_wdata;
++							st <= ide1;
++						end if;
++					when ide1 =>
++						ide_next <= acc_wr & not acc_wr & "0000";
++						st <= set_addr;
++					when set_addr =>
++						ide_next <= acc_sel;
++						if acc_wr = '1' then
++							st <= set_data1;
++						else
++							st <= waitclose;
++							wait_cnt <= WAIT_CLOSE;
++						end if;
++					when set_data1 =>
++						ide_next <= acc_data(5 downto 0);
++						st <= set_data2;
++					when set_data2 =>
++						ide_next <= acc_data(11 downto 6);
++						st <= set_data3;
++					when set_data3 =>
++						ide_next(3 downto 0) <= acc_data(15 downto 12);
++						st <= waitclose;
++						wait_cnt <= WAIT_CLOSE;
++					when waitclose =>
++						if wait_cnt = 0 then
++							ide_next <= (others => '0');
++							if acc_wr = '1' then
++								st <= setwaitend;
++							else
++								st <= read1;
++								wait_cnt <= WAIT_READ;
++							end if;
++						else
++							st <= waitclose;
++						end if;
++					when read1 =>
++						if wait_cnt = 0 then
++							st <= read2;
++						else
++							st <= read1;
++						end if;
++						rdata(3 downto 0) <= ide_in_q;
++					when read2 =>
++						rdata(7 downto 4) <= ide_in_q;
++						st <= read3;
++					when read3 =>
++						rdata(11 downto 8) <= ide_in_q;
++						st <= read4;
++					when read4 =>
++						rdata(15 downto 12) <= ide_in_q;
++						st <= setwaitend;
++					when setwaitend =>
++						ide_ack <= '1';
++						wait_cnt <= WAIT_END;
++						st <= waitend;
++					when waitend =>
++						if wait_cnt /= 0 then
++							st <= waitend;
++						end if;
++				end case;
++
++				-- serial slots, cyclone.vhd:106-166
++				ser_next <= '1';
++				kmshift <= kmshift(7 downto 0) & vid_ser_in;
++				km_cnt <= km_cnt + 1;
++				if locked = '1' then
++					case to_integer(km_cnt(2 downto 0)) is
++						when 0 => ser_next <= km_cnt(3);
++						when 1 => ser_next <= ps2k_dat_out;
++						when 2 => ser_next <= ps2k_clk_out;
++						when 3 => ser_next <= ps2m_dat_out;
++						when 4 => ser_next <= ps2m_clk_out;
++						when 5 => ser_next <= txd;
++						when 6 => ser_next <= lrclk;
++						when others => ser_next <= shift(16);
++					end case;
++					case to_integer(km_cnt(2 downto 0)) is
++						when 0 => c2mhz <= kmshift(0);
++						when 1 => ioshift <= kmshift(0);
++						when 3 => kb_dat <= kmshift(0);
++						when 4 => kb_clk <= kmshift(0);
++						when 5 => ms_dat <= kmshift(0);
++						when 6 => ms_clk <= kmshift(0);
++						when 7 => rx <= kmshift(0);
++						when others => null;
++					end case;
++				end if;
++				if km_cnt(2 downto 0) = "010" then
++					if kmshift(8) = kmshift(0) then
++						km_cnt(2 downto 0) <= "010";
++						insync <= (others => '0');
++						locked <= '0';
++					elsif insync = 15 then
++						locked <= '1';
++					else
++						insync <= insync + 1;
++						km_cnt(3) <= kmshift(0);
++					end if;
++				end if;
++			end if;
++
++			-- audio shifter and joystick rebuild on the relayed C2MHz,
++			-- cyclone.vhd:171-222
++			c2mhz_d <= c2mhz;
++			if c2mhz_d = '1' and c2mhz = '0' then
++				if count = 0 then
++					count <= to_unsigned(23, 5);
++					lrclk <= not lrclk;
++					if lrclk = '1' then
++						shift <= '0' & audio_l;
++					else
++						shift <= '0' & audio_r;
++					end if;
++				else
++					count <= count - 1;
++					if count < 17 then
++						shift <= shift(15 downto 0) & '0';
++					end if;
++				end if;
++			end if;
++			if c2mhz_d = '0' and c2mhz = '1' then
++				if jshift(15) = '0' then
++					jshift <= (15 downto 1 => '1') & ioshift;
++					ja <= '1' & jshift(8) & jshift(11) & jshift(10) & jshift(9) & jshift(7);
++					jb <= '1' & jshift(5) & jshift(2) & jshift(3) & jshift(4) & jshift(6);
++				else
++					jshift <= jshift(14 downto 0) & ioshift;
++				end if;
++			end if;
++
++			if reset = '1' then
++				st <= idle;
++				locked <= '0';
++				insync <= (others => '0');
++				kb_clk <= '1';
++				kb_dat <= '1';
++				ms_clk <= '1';
++				ms_dat <= '1';
++				rx <= '1';
++				ja <= (others => '1');
++				jb <= (others => '1');
++			end if;
++		end if;
++	end process;
++end architecture;
+diff --git a/Board/cone_ext/cone_sd_ata.vhd b/Board/cone_ext/cone_sd_ata.vhd
+new file mode 100644
+index 0000000..65ab5a3
+--- /dev/null
++++ b/Board/cone_ext/cone_sd_ata.vhd
+@@ -0,0 +1,359 @@
++-- -----------------------------------------------------------------------
++-- cone_sd_ata.vhd
++--
++-- SD-card-in-SPI-mode front end for an ATA/CF device, so DeMiSTify's
++-- unchanged firmware (firmware/spi_sd.c) reaches the C-One's CF slot
++-- through cone_mm_link's IDE tunnel. Copyright (c) 2026 Josh Bailey.
++--
++-- This program is free software: you can redistribute it and/or modify
++-- it under the terms of the GNU General Public License as published by
++-- the Free Software Foundation, either version 3 of the License, or
++-- (at your option) any later version.
++--
++-- SPI: mode 0 slave on substitute_mcu's raw SD port. spi_controller
++-- raises SCK and samples MISO on the same controller clock edge, so MISO
++-- (tx(7)) moves only after a rising SCK has been seen here, and the next
++-- byte is loaded on the eighth rising edge. SCK, MOSI and CS come from
++-- registers clocked by a PLL output related to clk; no synchroniser.
++--
++-- SD commands, encoded as spi_sd.c:36-45 sends them; responses start in
++-- the second byte after the CRC byte, and R1 waits there (0xFF) until the
++-- ATA side is idle (spi_sd.c:118-125 polls up to 40000 bytes):
++--   CMD0   R1 0x01, enter idle
++--   CMD8   R1 + 00 00 0v aa (echo of arg[11:0]; spi_sd.c:208-209)
++--   CMD55  R1
++--   CMD41  R1 0x00, leave idle (sent after CMD55, spi_sd.c:149-152)
++--   CMD58  R1 + OCR C0 FF 80 00 (power-up done, CCS; spi_sd.c:232-238)
++--   CMD9   ATA IDENTIFY, then FE + 16-byte CSD v2 + FF FF (spi_sd.c:417-420
++--          reads only byte 0 and C_SIZE in bytes 7-9)
++--   CMD16  R1
++--   CMD17  ATA READ SECTORS, FF while it runs, FE + 512 bytes + FF FF, or
++--          the data error token 01 if the device reports ERR
++--   CMD24  R1, then FE + 512 bytes + 2 CRC bytes from the host; data
++--          response 05, 00 until the ATA write completes, then FF
++--   other  R1 0x04 (illegal command)
++-- R1 carries the idle bit (bit 0) for every supported command.
++--
++-- ATA: PIO, LBA28, device 0 on CS0, one sector per command, in the order
++-- of Minimig's _MMC_Read/_MMC_Write (Armreplacement/start.asm:113-268):
++-- wait BSY=0 and DRDY=1, sector count 1, LBA 3-5, device E0|LBA[27:24],
++-- command; wait BSY=0 and DRQ=1 (or ERR); 256 data words, low byte first;
++-- after a write, wait BSY=0. Registers: Gayle.v:59-66 (0 data, 2 count,
++-- 3-5 LBA, 6 device/head, 7 status/command); status bits Gayle.v:88-91
++-- (7 BSY, 6 DRDY, 3 DRQ, 0 ERR); commands start.asm:16-19 (20 read,
++-- 30 write, EC identify). IDENTIFY words 60-61 hold the LBA28 sector
++-- count (DeMiSTify firmware/ide.c:145-146); the CSD reports
++-- C_SIZE = sectors / 1024 - 1, which spi_sd.c:419-420 turns back into
++-- (C_SIZE + 1) * 1024 sectors.
++-- -----------------------------------------------------------------------
++
++library ieee;
++use ieee.std_logic_1164.all;
++use ieee.numeric_std.all;
++
++entity cone_sd_ata is
++	port (
++		clk : in std_logic;
++		reset : in std_logic;
++
++		spi_cs_n : in std_logic;
++		spi_sck : in std_logic;
++		spi_mosi : in std_logic;
++		spi_miso : out std_logic;
++
++		-- cone_mm_link IDE port (CS0)
++		ide_req : out std_logic;
++		ide_wr : out std_logic;
++		ide_reg : out std_logic_vector(2 downto 0);
++		ide_wdata : out std_logic_vector(15 downto 0);
++		ide_rdata : in std_logic_vector(15 downto 0);
++		ide_ack : in std_logic
++	);
++end entity;
++
++architecture rtl of cone_sd_ata is
++	constant BSY : natural := 7;
++	constant DRDY : natural := 6;
++	constant DRQ : natural := 3;
++	constant ERR : natural := 0;
++
++	-- sd: what the byte now being clocked belongs to
++	--   s_cmd    idle, FF out, waiting for a command byte
++	--   s_arg    argument and CRC bytes in
++	--   s_ncr    FF out until the ATA side is idle, then R1 is loaded
++	--   s_tail   R1 out, then the four R7/OCR bytes
++	--   s_rdwait FF out until the ATA read/identify completes
++	--   s_data   token out, then the data block
++	--   s_wrtok  FF out, waiting for the host's FE token
++	--   s_wrdata data block and CRC in
++	--   s_wrbusy data response out, then busy until the ATA write completes
++	type sd_state_t is (s_cmd, s_arg, s_ncr, s_tail, s_rdwait, s_data, s_wrtok, s_wrdata, s_wrbusy);
++	signal sd : sd_state_t := s_cmd;
++	signal sck_d : std_logic := '1';
++	signal bitn : unsigned(2 downto 0) := (others => '0');
++	signal rx : std_logic_vector(6 downto 0) := (others => '1');
++	signal tx : std_logic_vector(7 downto 0) := (others => '1');
++	signal cmd : natural range 0 to 63 := 0;
++	signal arg : std_logic_vector(31 downto 0) := (others => '0');
++	signal n : unsigned(9 downto 0) := (others => '0');
++	signal idle : std_logic := '1';
++	signal even : std_logic_vector(7 downto 0) := (others => '0');
++
++	-- ATA side: step 0 idle, 1 wait ready, 2-7 write registers 2-7,
++	-- 8 wait DRQ, 9 data words, 10 wait write completion
++	type op_t is (op_identify, op_read, op_write);
++	signal op : op_t := op_read;
++	signal go : std_logic := '0';
++	signal failed : std_logic := '0';
++	signal step : natural range 0 to 10 := 0;
++	signal w : unsigned(7 downto 0) := (others => '0');
++	signal lba : std_logic_vector(27 downto 0) := (others => '0');
++	signal sectors : unsigned(27 downto 0) := (others => '0');
++	signal ata_idle : boolean;
++	signal cmd_byte : std_logic_vector(7 downto 0);
++
++	type ram_t is array (0 to 255) of std_logic_vector(15 downto 0);
++	signal ram : ram_t;
++	signal ram_we : std_logic := '0';
++	signal ram_wa, ram_ra : unsigned(7 downto 0) := (others => '0');
++	signal ram_wd, ram_q : std_logic_vector(15 downto 0) := (others => '0');
++
++	function r1_of(c : natural; idl : std_logic) return std_logic_vector is
++	begin
++		case c is
++			when 0 => return x"01";
++			when 41 => return x"00";
++			when 8 | 9 | 16 | 17 | 24 | 55 | 58 => return "0000000" & idl;
++			when others => return "00000" & "10" & idl;
++		end case;
++	end function;
++
++	function tail_of(c : natural; a : std_logic_vector(31 downto 0); k : unsigned(1 downto 0))
++		return std_logic_vector is
++		variable r : std_logic_vector(31 downto 0) := x"00000" & a(11 downto 0);
++	begin
++		if c = 58 then
++			r := x"C0FF8000";
++		end if;
++		case k is
++			when "00" => return r(31 downto 24);
++			when "01" => return r(23 downto 16);
++			when "10" => return r(15 downto 8);
++			when others => return r(7 downto 0);
++		end case;
++	end function;
++
++	function csd_of(k : unsigned(3 downto 0); csize : unsigned(21 downto 0)) return std_logic_vector is
++	begin
++		case to_integer(k) is
++			when 0 => return x"40";
++			when 7 => return "00" & std_logic_vector(csize(21 downto 16));
++			when 8 => return std_logic_vector(csize(15 downto 8));
++			when 9 => return std_logic_vector(csize(7 downto 0));
++			when others => return x"00";
++		end case;
++	end function;
++begin
++	spi_miso <= tx(7);
++	ata_idle <= step = 0 and go = '0';
++	ram_ra <= w when step /= 0 else n(8 downto 1);
++
++	ide_req <= '0' when step = 0 else '1';
++	ide_reg <= "000" when step = 9 else
++		std_logic_vector(to_unsigned(step, 3)) when step >= 2 and step <= 7 else "111";
++	ide_wr <= '1' when (step >= 2 and step <= 7) or (step = 9 and op = op_write) else '0';
++	with op select cmd_byte <=
++		x"EC" when op_identify,
++		x"20" when op_read,
++		x"30" when op_write;
++	with step select ide_wdata <=
++		x"0001" when 2,
++		x"00" & lba(7 downto 0) when 3,
++		x"00" & lba(15 downto 8) when 4,
++		x"00" & lba(23 downto 16) when 5,
++		x"00E" & lba(27 downto 24) when 6,
++		x"00" & cmd_byte when 7,
++		ram_q when others;
++
++	process(clk)
++	begin
++		if rising_edge(clk) then
++			if ram_we = '1' then
++				ram(to_integer(ram_wa)) <= ram_wd;
++			end if;
++			ram_q <= ram(to_integer(ram_ra));
++		end if;
++	end process;
++
++	process(clk)
++		variable b : std_logic_vector(7 downto 0);
++	begin
++		if rising_edge(clk) then
++			ram_we <= '0';
++
++			-- ATA sequencer
++			if step = 0 and go = '1' then
++				step <= 1;
++				go <= '0';
++				failed <= '0';
++			elsif ide_ack = '1' then
++				case step is
++					when 1 =>
++						if ide_rdata(BSY) = '0' and ide_rdata(DRDY) = '1' then
++							step <= 2;
++						end if;
++					when 8 =>
++						if ide_rdata(BSY) = '0' then
++							if ide_rdata(ERR) = '1' then
++								failed <= '1';
++								step <= 0;
++							elsif ide_rdata(DRQ) = '1' then
++								w <= (others => '0');
++								step <= 9;
++							end if;
++						end if;
++					when 9 =>
++						w <= w + 1;
++						if op /= op_write then
++							ram_we <= '1';
++							ram_wa <= w;
++							ram_wd <= ide_rdata;
++						end if;
++						if op = op_identify and w = 60 then
++							sectors(15 downto 0) <= unsigned(ide_rdata);
++						end if;
++						if op = op_identify and w = 61 then
++							sectors(27 downto 16) <= unsigned(ide_rdata(11 downto 0));
++						end if;
++						if w = 255 and op = op_write then
++							step <= 10;
++						elsif w = 255 then
++							step <= 0;
++						end if;
++					when 10 =>
++						if ide_rdata(BSY) = '0' then
++							failed <= ide_rdata(ERR);
++							step <= 0;
++						end if;
++					when others =>
++						step <= step + 1;
++				end case;
++			end if;
++
++			-- SPI slave
++			sck_d <= spi_sck;
++			if spi_cs_n = '1' then
++				bitn <= (others => '0');
++				tx <= (others => '1');
++				sd <= s_cmd;
++			elsif sck_d = '0' and spi_sck = '1' then
++				rx <= rx(5 downto 0) & spi_mosi;
++				bitn <= bitn + 1;
++				tx <= tx(6 downto 0) & '1';
++				if bitn = 7 then
++					b := rx & spi_mosi;
++					tx <= x"FF";
++					case sd is
++						when s_cmd =>
++							if b(7 downto 6) = "01" then
++								cmd <= to_integer(unsigned(b(5 downto 0)));
++								n <= (others => '0');
++								sd <= s_arg;
++							end if;
++						when s_arg =>
++							n <= n + 1;
++							if n = 4 then
++								sd <= s_ncr;
++							else
++								arg <= arg(23 downto 0) & b;
++							end if;
++						when s_ncr =>
++							if ata_idle then
++								tx <= r1_of(cmd, idle);
++								n <= (others => '0');
++								sd <= s_cmd;
++								case cmd is
++									when 0 => idle <= '1';
++									when 41 => idle <= '0';
++									when 8 | 58 => sd <= s_tail;
++									when 9 | 17 =>
++										op <= op_read;
++										if cmd = 9 then
++											op <= op_identify;
++										end if;
++										lba <= arg(27 downto 0);
++										go <= '1';
++										sd <= s_rdwait;
++									when 24 => sd <= s_wrtok;
++									when others => null;
++								end case;
++							end if;
++						when s_tail =>
++							n <= n + 1;
++							if n = 4 then
++								sd <= s_cmd;
++							else
++								tx <= tail_of(cmd, arg, n(1 downto 0));
++							end if;
++						when s_rdwait =>
++							if ata_idle then
++								n <= (others => '0');
++								if failed = '1' then
++									tx <= x"01";
++									sd <= s_cmd;
++								else
++									tx <= x"FE";
++									sd <= s_data;
++								end if;
++							end if;
++						when s_data =>
++							n <= n + 1;
++							if (op = op_identify and n = 16) or n = 512 then
++								sd <= s_cmd;
++							elsif op = op_identify then
++								tx <= csd_of(n(3 downto 0), resize(sectors(27 downto 10) - 1, 22));
++							elsif n(0) = '0' then
++								tx <= ram_q(7 downto 0);
++							else
++								tx <= ram_q(15 downto 8);
++							end if;
++						when s_wrtok =>
++							if b = x"FE" then
++								n <= (others => '0');
++								sd <= s_wrdata;
++							end if;
++						when s_wrdata =>
++							n <= n + 1;
++							if n(0) = '0' then
++								even <= b;
++							elsif n < 512 then
++								ram_we <= '1';
++								ram_wa <= n(8 downto 1);
++								ram_wd <= b & even;
++							end if;
++							if n = 513 then
++								tx <= x"05";
++								op <= op_write;
++								lba <= arg(27 downto 0);
++								go <= '1';
++								sd <= s_wrbusy;
++							end if;
++						when s_wrbusy =>
++							if ata_idle then
++								sd <= s_cmd;
++							else
++								tx <= x"00";
++							end if;
++					end case;
++				end if;
++			end if;
++
++			if reset = '1' then
++				step <= 0;
++				go <= '0';
++				idle <= '1';
++				sd <= s_cmd;
++			end if;
++		end if;
++	end process;
++end architecture;
 diff --git a/Board/cone_ext/constraints.sdc b/Board/cone_ext/constraints.sdc
 new file mode 100644
-index 0000000..f5ab329
+index 0000000..3b8e317
 --- /dev/null
 +++ b/Board/cone_ext/constraints.sdc
-@@ -0,0 +1,58 @@
+@@ -0,0 +1,73 @@
 +# C-One FPGA Extender timing constraints
 +create_clock -name "clk28" -period 35.242ns [get_ports {clk28}]
 +create_clock -name "clk14" -period 69.841ns [get_ports {clk14}]
@@ -703,16 +1082,36 @@ index 0000000..f5ab329
 +
 +set VGA_OUT {red* grn* blu* hsync_oc vsync_oc}
 +
-+set FALSE_OUT {sigma_l sigma_r}
-+set FALSE_IN {mdb* vid_spare*}
++set FALSE_OUT {sigma_l sigma_r vid_spare_out}
++set FALSE_IN {mdb* vid_spare_in*}
 +
 +set_false_path -to [get_ports {ram_clk}]
 +
-+# vid-bus link to the 1k30 (clocked by the extender over vid[14])
-+# Placeholder 0.5 ns delays as in DeMiSTify's chameleon64 constraints; the
-+# board's real vid-bus delays are not known (BLOCKED.md).
-+set_input_delay  0.5 -clock [get_clocks ${supportclk}] [get_ports {mux_q[*]}]
-+set_output_delay 0.5 -clock [get_clocks ${supportclk}] [get_ports {mux_clk mux_sel[*] mux_d[*]}]
++# vid-bus link to the 1k30 (cone_mm_link). IOclk is clk_100 / 2 from the
++# register cone_mm_link|ioclk and is the only clock of the 1k30's link
++# logic (acex.vhd:84-86), so the board-side delays are given against the
++# vid_ioclk pin. They are not known (BLOCKED.md #3): 0.5 ns placeholders as
++# in DeMiSTify's chameleon64 constraints, so the reported slack is the
++# budget left for wires and the 1k30.
++set ioclk_reg {*cone_mm_link:*|ioclk}
++create_generated_clock -name ioclk -source [get_pins ${supportclk}] -divide_by 2 [get_registers $ioclk_reg]
++create_generated_clock -name vid_ioclk -source [get_registers $ioclk_reg] [get_ports {vid_ioclk}]
++
++# Extender -> 1k30: launched on the clk_100 falling edge while IOclk is
++# high (cfide.vhd:517-520), captured on the next IOclk rise (acex.vhd:86-87)
++# 1.5 clk_100 periods later; the IOclk rise 0.5 periods before the launch
++# bounds the hold. -start moves the launch back to the enabled falling edge.
++set_output_delay -clock vid_ioclk 0.5 [get_ports {vid_ide_out[*] vid_ser_out}]
++set_multicycle_path -setup -start 2 -from [get_clocks ${supportclk}] -to [get_clocks vid_ioclk]
++set_multicycle_path -hold -start 1 -from [get_clocks ${supportclk}] -to [get_clocks vid_ioclk]
++
++# 1k30 -> extender: launched on IOclk rise k (acex.vhd:89,174), sampled on
++# the clk_100 edge that raises IOclk k+1 (cfide.vhd:527-531,
++# cyclone.vhd:133-134), two clk_100 periods later; the launch on that same
++# IOclk rise bounds the hold.
++set_input_delay -clock vid_ioclk 0.5 [get_ports {vid_ide_in[*] vid_ser_in}]
++set_multicycle_path -setup -end 2 -from [get_clocks vid_ioclk] -to [get_clocks ${supportclk}]
++set_multicycle_path -hold -end 1 -from [get_clocks vid_ioclk] -to [get_clocks ${supportclk}]
 +
 +# The guest's SPI_SCK is substitute_mcu's sck register, which the
 +# divide-by-4 spiclk above stands in for. The selects and conf_data0 are
@@ -722,16 +1121,11 @@ index 0000000..f5ab329
 +# asynchronous resets of their SPI logic.
 +set_false_path -from [get_registers {substitute_mcu:controller|spi_ss* substitute_mcu:controller|conf_data0}] -to [get_clocks {spiclk spiclkfast}]
 +
-+# spi_controller changes MOSI with the falling SCK step; the next rising
-+# step needs a full req/ack handshake, and with SPI_EXTERNALCLK the ack
-+# passes two synchroniser flops (substitute_mcu spi_ack_d, spi_ack_r), so
-+# at least three controller cycles separate them. Two are allowed here.
++# spi_controller changes MOSI with the falling SCK step; with SPI_FASTBIT 0
++# the next (rising) step comes two controller cycles later at the earliest
++# (substitute_mcu.vhd:377-383).
 +set_multicycle_path -setup -start 2 -from [get_registers {substitute_mcu:controller|spi_controller:spi|mosi}] -to [get_clocks {spiclk spiclkfast}]
 +set_multicycle_path -hold -start 1 -from [get_registers {substitute_mcu:controller|spi_controller:spi|mosi}] -to [get_clocks {spiclk spiclkfast}]
-+
-+# LED levels from the guest clock domain enter cone_io through a two-flop
-+# synchroniser; only its first stage is unconstrained.
-+set_false_path -to [get_registers {*cone_io:*|led_meta[*]}]
 +
 +# JTAG (debug interface, if enabled)
 +set_input_delay -clock altera_reserved_tck -clock_fall 3 altera_reserved_tdi
@@ -1026,7 +1420,7 @@ index 0000000..818cfb1
 +end architecture;
 diff --git a/Board/cone_ext/pin_aliases.txt b/Board/cone_ext/pin_aliases.txt
 new file mode 100644
-index 0000000..0b8798d
+index 0000000..5b8694d
 --- /dev/null
 +++ b/Board/cone_ext/pin_aliases.txt
 @@ -0,0 +1,76 @@
@@ -1045,39 +1439,39 @@ index 0000000..0b8798d
 +hsync_oc nHSync
 +vsync_oc nVSync
 +blu[4] dac[15]
-+mux_sel[3] addbo[8]
++vid_ioclk addbo[8]
 +blu[3] dac[14]
-+mux_clk addbo[7]
++vid_ser_out addbo[7]
 +blu[0] dac[11]
 +blu[2] dac[13]
 +blu[1] dac[12]
-+vid_spare[2] addbi[5]
-+vid_spare[1] addbi[4]
-+vid_spare[0] sysclk
++vid_ser_in addbi[5]
++vid_spare_in[1] addbi[4]
++vid_spare_in[0] sysclk
 +clk14 clk_14
-+mux_sel[2] addbo[6]
++vid_spare_out addbo[6]
 +grn[5] dac[10]
-+mux_sel[1] addbo[5]
++vid_ide_out[5] addbo[5]
 +grn[4] dac[9]
 +grn[3] dac[8]
-+mux_sel[0] addbo[4]
++vid_ide_out[4] addbo[4]
 +grn[2] dac[7]
-+mux_d[3] addbo[3]
++vid_ide_out[3] addbo[3]
 +grn[1] dac[6]
-+mux_d[2] addbo[2]
++vid_ide_out[2] addbo[2]
 +grn[0] dac[5]
-+mux_d[1] addbo[1]
++vid_ide_out[1] addbo[1]
 +red[4] dac[4]
-+mux_d[0] addbo[0]
++vid_ide_out[0] addbo[0]
 +red[3] dac[3]
 +red[2] dac[2]
 +red[1] dac[1]
 +red[0] dac[0]
 +ram_data[8] DRAM_DQ[8]
-+mux_q[3] addbi[3]
-+mux_q[2] addbi[2]
-+mux_q[1] addbi[1]
-+mux_q[0] addbi[0]
++vid_ide_in[3] addbi[3]
++vid_ide_in[2] addbi[2]
++vid_ide_in[1] addbi[1]
++vid_ide_in[0] addbi[0]
 +ram_udqm DRAM_UDQM
 +ram_clk DRAM_CLK
 +ram_addr[11] DRAM_ADDR[11]

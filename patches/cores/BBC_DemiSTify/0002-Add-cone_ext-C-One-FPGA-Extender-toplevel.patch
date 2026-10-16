@@ -7,24 +7,26 @@ Guest CLOCK_27 is fed 27.09 MHz from the board PLL, so the MiST clockgen
 is used unchanged. The core's SDRAM map ends at 0xDFFFF, within the
 extender's 12 row bits.
 ---
- cone_ext/cone_ext_top.vhd | 323 ++++++++++++++++++++++++++++++++++++++
+ cone_ext/cone_ext_top.vhd | 338 ++++++++++++++++++++++++++++++++++++++
  cone_ext/top.qip          |   2 +
- 2 files changed, 325 insertions(+)
+ 2 files changed, 340 insertions(+)
  create mode 100644 cone_ext/cone_ext_top.vhd
  create mode 100644 cone_ext/top.qip
 
 diff --git a/cone_ext/cone_ext_top.vhd b/cone_ext/cone_ext_top.vhd
 new file mode 100644
-index 0000000..82e50b2
+index 0000000..3104b93
 --- /dev/null
 +++ b/cone_ext/cone_ext_top.vhd
-@@ -0,0 +1,323 @@
+@@ -0,0 +1,338 @@
 +-- -----------------------------------------------------------------------
 +-- C-One FPGA Extender toplevel for the BBC Micro core (DeMiSTify cone_ext)
 +--
 +-- Derived from templates/chameleon64/chameleon64_top.vhd. The Chameleon's
-+-- CPLD mux is replaced by cone_io, which tunnels the same signal set over
-+-- the 16 "vid" lines to the C-One's ACEX 1K30.
++-- CPLD mux is replaced by cone_mm_link, which speaks the Minimig V2.01
++-- link to the C-One's ACEX 1K30 over the 16 "vid" lines (keyboard, mouse,
++-- joysticks, CF), and cone_sd_ata, which answers substitute_mcu's SD card
++-- commands with ATA transfers to the CF card through that link.
 +-- -----------------------------------------------------------------------
 +
 +library IEEE;
@@ -43,13 +45,15 @@ index 0000000..82e50b2
 +	clk14 : in std_logic;
 +	clk28 : in std_logic;
 +
-+-- vid bus to/from the 1k30 (cone_io.vhd header; input-only lines per the
++-- vid bus to/from the 1k30 (cone_mm_link.vhd; input-only lines per the
 +-- Quartus device database: 169009 for any other direction)
-+	mux_clk : out std_logic;                     -- vid[14]
-+	mux_sel : out unsigned(3 downto 0);          -- vid[15], vid[10:8]
-+	mux_d : out unsigned(3 downto 0);            -- vid[7:4]
-+	mux_q : in unsigned(3 downto 0);             -- vid[3:0]
-+	vid_spare : in std_logic_vector(2 downto 0); -- vid[13:11]
++	vid_ioclk : out std_logic;                      -- vid[15]
++	vid_ser_out : out std_logic;                    -- vid[14]
++	vid_ser_in : in std_logic;                      -- vid[13]
++	vid_spare_in : in std_logic_vector(1 downto 0); -- vid[12:11]
++	vid_spare_out : out std_logic;                  -- vid[10]
++	vid_ide_out : out std_logic_vector(5 downto 0); -- vid[9:4]
++	vid_ide_in : in std_logic_vector(3 downto 0);   -- vid[3:0]
 +
 +-- mdb - board-wide data bus, owned by the 1k30/1k100; mdb[3:0] and
 +-- mdb[7:5] are input-only locations, so the port is an input
@@ -95,10 +99,6 @@ index 0000000..82e50b2
 +	signal reset : std_logic;
 +	signal reset_n : std_logic;
 +
-+-- LEDs
-+	signal led_green : std_logic;
-+	signal led_red : std_logic;
-+
 +-- PS/2
 +	signal ps2_keyboard_clk_in, ps2_keyboard_dat_in : std_logic;
 +	signal ps2_keyboard_clk_out, ps2_keyboard_dat_out : std_logic;
@@ -106,13 +106,16 @@ index 0000000..82e50b2
 +	signal ps2_mouse_clk_out, ps2_mouse_dat_out : std_logic;
 +	signal intercept : std_logic;
 +
-+-- SD card (raw SPI tunnelled through the 1k30)
++-- SD card (raw SPI to cone_sd_ata)
 +	signal spi_mosi : std_logic;
 +	signal spi_miso : std_logic;
 +	signal mmc_cs : std_logic;
 +	signal spi_clk : std_logic;
-+	signal spi_ack : std_logic;
-+	signal spi_req : std_logic;
++
++-- IDE register access (cone_sd_ata -> cone_mm_link)
++	signal ide_req, ide_wr, ide_ack : std_logic;
++	signal ide_reg : std_logic_vector(2 downto 0);
++	signal ide_wdata, ide_rdata : std_logic_vector(15 downto 0);
 +
 +-- internal SPI signals (controller <-> guest)
 +	signal spi_do : std_logic;
@@ -122,15 +125,13 @@ index 0000000..82e50b2
 +	signal conf_data0 : std_logic;
 +	signal spi_clk_int : std_logic;
 +
-+-- RS232 serial (unconnected on the extender)
++-- RS232: TxD reaches the 1k30's TxD pin; Minimig's 1k30 sends no RxD
 +	signal rs232_rxd : std_logic := '1';
 +	signal rs232_txd : std_logic;
 +
 +-- IO
-+	signal button_reset_n : std_logic;
-+	signal menu_button_n : std_logic;
-+	signal c64_joy1 : unsigned(5 downto 0);
-+	signal c64_joy2 : unsigned(5 downto 0);
++	signal cone_joy_a : unsigned(5 downto 0);
++	signal cone_joy_b : unsigned(5 downto 0);
 +	signal joy1 : std_logic_vector(demistify_joybits-1 downto 0);
 +	signal joy2 : std_logic_vector(demistify_joybits-1 downto 0);
 +
@@ -159,7 +160,7 @@ index 0000000..82e50b2
 +	port map (
 +		clk => clk14,
 +		enable => '1',
-+		button => not (pll_locked and button_reset_n),
++		button => not pll_locked,
 +		reset => reset_14
 +	);
 +
@@ -172,52 +173,65 @@ index 0000000..82e50b2
 +	end process;
 +
 +-- -----------------------------------------------------------------------
-+-- vid bus to the 1k30 (pin budget and protocol: cone_io.vhd header)
++-- vid bus to the 1k30: Minimig V2.01 link (IOclk = clk_100 / 2) and the
++-- SD-to-ATA bridge on its IDE port (CF card, device 0 on CS0)
 +-- -----------------------------------------------------------------------
-+	-- Link timing: mux_clk = clk_100 / (2 * MUX_DIV); q sampled Q_LAT
-+	-- clk_100 cycles after each mux_clk rise, which tolerates a round trip
-+	-- (extender -> 1k30 -> extender) of up to Q_LAT * 10 ns minus margin.
-+	-- The board's round trip is not yet measured (BLOCKED.md); these values
-+	-- leave room for one of up to ~19 ns. sim/tb_vidbus.vhd checks them.
-+	myIO : entity work.cone_io
-+	generic map (
-+		MUX_DIV => 2,
-+		Q_LAT => 2,
-+		MISO_VISITS => 1
-+	)
++	link : entity work.cone_mm_link
 +	port map (
-+		clk_mux => clk_100,
++		clk => clk_100,
 +		reset => reset,
-+		mux_clk => mux_clk,
-+		mux_sel => mux_sel,
-+		mux_d => mux_d,
-+		mux_q => mux_q,
++		vid_ioclk => vid_ioclk,
++		vid_ser_out => vid_ser_out,
++		vid_ser_in => vid_ser_in,
++		vid_ide_out => vid_ide_out,
++		vid_ide_in => vid_ide_in,
 +
++		ide_req => ide_req,
++		ide_wr => ide_wr,
++		ide_cs0 => '1',
++		ide_cs1 => '0',
++		ide_reg => ide_reg,
++		ide_wdata => ide_wdata,
++		ide_rdata => ide_rdata,
++		ide_ack => ide_ack,
++
++		ps2k_clk_out => ps2_keyboard_clk_out,
++		ps2k_dat_out => ps2_keyboard_dat_out,
++		ps2m_clk_out => ps2_mouse_clk_out,
++		ps2m_dat_out => ps2_mouse_dat_out,
++		ps2k_clk_in => ps2_keyboard_clk_in,
++		ps2k_dat_in => ps2_keyboard_dat_in,
++		ps2m_clk_in => ps2_mouse_clk_in,
++		ps2m_dat_in => ps2_mouse_dat_in,
++
++		txd => rs232_txd,
++		rxd => open,
++		sync_ok => open,
++
++		joy_a => cone_joy_a,
++		joy_b => cone_joy_b,
++
++		-- the guest's audio stays on the sigma-delta pins; the 1k30's
++		-- serial DAC gets silence
++		audio_l => (others => '0'),
++		audio_r => (others => '0')
++	);
++	vid_spare_out <= '1';
++
++	sd_bridge : entity work.cone_sd_ata
++	port map (
++		clk => clk_100,
++		reset => reset,
 +		spi_cs_n => mmc_cs,
-+		spi_raw_clk => spi_clk,
-+		spi_raw_mosi => spi_mosi,
-+		spi_raw_req => spi_req,
-+		spi_raw_ack => spi_ack,
++		spi_sck => spi_clk,
++		spi_mosi => spi_mosi,
 +		spi_miso => spi_miso,
-+		mmc_cd_n => open,
-+		mmc_wp => open,
-+
-+		ps2_keyboard_clk_out => ps2_keyboard_clk_out,
-+		ps2_keyboard_dat_out => ps2_keyboard_dat_out,
-+		ps2_keyboard_clk_in => ps2_keyboard_clk_in,
-+		ps2_keyboard_dat_in => ps2_keyboard_dat_in,
-+		ps2_mouse_clk_out => ps2_mouse_clk_out,
-+		ps2_mouse_dat_out => ps2_mouse_dat_out,
-+		ps2_mouse_clk_in => ps2_mouse_clk_in,
-+		ps2_mouse_dat_in => ps2_mouse_dat_in,
-+
-+		joystick1 => c64_joy1,
-+		joystick2 => c64_joy2,
-+
-+		led_green => led_green,
-+		led_red => led_red,
-+		button_reset_n => button_reset_n,
-+		button_menu_n => menu_button_n
++		ide_req => ide_req,
++		ide_wr => ide_wr,
++		ide_reg => ide_reg,
++		ide_wdata => ide_wdata,
++		ide_rdata => ide_rdata,
++		ide_ack => ide_ack
 +	);
 +
 +	-- C-One ports -> substitute_mcu joystick words (active low, buttons at
@@ -230,8 +244,8 @@ index 0000000..82e50b2
 +	)
 +	port map (
 +		clk => clk_100,
-+		joy_a => c64_joy1,
-+		joy_b => c64_joy2,
++		joy_a => cone_joy_a,
++		joy_b => cone_joy_b,
 +		joy1_out => joy1,
 +		joy2_out => joy2
 +	);
@@ -246,7 +260,7 @@ index 0000000..82e50b2
 +	port map (
 +		CLOCK_27 => clk_27 & clk_27,
 +--		RESET_N => reset_n,
-+		LED => led_red,
++		LED => open,
 +		-- SDRAM. Guest cores drive 13 address bits; A[12] has no pin. The
 +		-- BBC map ends at 0xDFFFF (sdram.v row = addr[21:9]), so at most 11
 +		-- row bits are used and A[12] is always 0.
@@ -301,7 +315,11 @@ index 0000000..82e50b2
 +		debug => false,
 +		jtag_uart => false,
 +		SPI_FASTBIT => 0,
-+		SPI_EXTERNALCLK => true     -- SPI is paced by cone_io's req/ack
++		-- cone_sd_ata is an on-chip slave: it answers a rising SCK within
++		-- one clk_100 cycle and MISO is next sampled a full SCK period later,
++		-- so no handshake is needed (the slow init clock ignores spi_ack
++		-- in either mode, substitute_mcu.vhd:373-383).
++		SPI_EXTERNALCLK => false
 +	)
 +	port map (
 +		clk => clk_50,
@@ -318,8 +336,7 @@ index 0000000..82e50b2
 +		spi_ss3 => spi_ss3,
 +		spi_ss4 => spi_ss4,
 +		conf_data0 => conf_data0,
-+		spi_req => spi_req,
-+		spi_ack => spi_ack,
++		spi_req => open,
 +		-- PS/2
 +		ps2k_clk_in => ps2_keyboard_clk_in,
 +		ps2k_dat_in => ps2_keyboard_dat_in,
@@ -332,14 +349,12 @@ index 0000000..82e50b2
 +		-- Joysticks
 +		joy1 => joy1,
 +		joy2 => joy2,
-+		buttons => (0 => menu_button_n, others => '0'),
++		buttons => (others => '1'),    -- none on the C-One; the OSD opens from the keyboard
 +		-- UART
 +		rxd => rs232_rxd,
 +		txd => rs232_txd,
 +		intercept => intercept
 +	);
-+
-+	led_green <= not spi_ss4;
 +
 +end architecture;
 diff --git a/cone_ext/top.qip b/cone_ext/top.qip

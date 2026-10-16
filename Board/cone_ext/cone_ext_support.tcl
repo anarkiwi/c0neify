@@ -1,5 +1,6 @@
 set_global_assignment -name SDC_FILE ${boardpath}/cone_ext/constraints.sdc
-set_global_assignment -name VHDL_FILE ${boardpath}/cone_ext/cone_io.vhd
+set_global_assignment -name VHDL_FILE ${boardpath}/cone_ext/cone_mm_link.vhd
+set_global_assignment -name VHDL_FILE ${boardpath}/cone_ext/cone_sd_ata.vhd
 set_global_assignment -name VHDL_FILE ${boardpath}/cone_ext/cone_mergeinputs.vhd
 set_global_assignment -name VHDL_FILE ${boardpath}/cone_ext/gen_reset.vhd
 set_global_assignment -name QIP_FILE ${boardpath}/cone_ext/hostclocks.qip
