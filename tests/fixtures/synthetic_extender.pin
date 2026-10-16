@@ -1,0 +1,103 @@
+ -- Synthetic test data for tests/test_verify_pins.py; not real board data.
+ -- Format follows a Quartus II .pin report.
+ -- 
+CHIP "synthetic_extender" ASSIGNED TO AN: EP3C25E144C8
+
+Pin Name/Usage                       : Location  : Dir.   : I/O Standard      : Voltage : I/O Bank  : User Assignment
+--------------------------------------------------------------------------------------------------------------------
+GND                                  : 1         : gnd    :                   :         :           :
+led_n                                : 2         : output : 3.3-V LVTTL       :         : 1         : Y
+spare_io                             : 3         : bidir  : 3.3-V LVTTL       :         : 1         : N
+GND                                  : 4         : gnd    :                   :         :           :
+VCCINT                               : 5         : power  :                   : 1.2V    :           :
+sdram_addr[2]                        : 6         : output : 3.3-V LVTTL       :         : 1         : Y
+sdram_addr[1]                        : 7         : output : 3.3-V LVTTL       :         : 1         : Y
+sdram_addr[0]                        : 8         : output : 3.3-V LVTTL       :         : 1         : Y
+VCCIO1                               : 9         : power  :                   : 3.3V    : 1         :
+RESERVED_INPUT_WITH_WEAK_PULLUP      : 10        :        :                   :         : 1         :
+~ALTERA_ASDO_DATA1~ / RESERVED_INPUT : 12        : input  :                   :         : 1         :
+mdb[4]                               : 13        : bidir  : 3.3-V LVTTL       :         : 1         : Y
+nSTATUS                              : 14        :        :                   :         : 1         :
+TCK                                  : 15        : input  :                   :         : 1         :
+TDI                                  : 16        : input  :                   :         : 1         :
+nCONFIG                              : 20        : input  :                   :         : 2         :
+DCLK                                 : 21        : input  :                   :         : 2         :
+mdb[3]                               : 22        : bidir  : 3.3-V LVTTL       :         : 2         : Y
+mdb[2]                               : 23        : bidir  : 3.3-V LVTTL       :         : 2         : Y
+mdb[1]                               : 24        : bidir  : 3.3-V LVTTL       :         : 2         : Y
+mdb[0]                               : 25        : bidir  : 3.3-V LVTTL       :         : 2         : Y
+VCCD_PLL1                            : 26        : power  :                   : 1.2V    :           :
+GNDA1                                : 27        : gnd    :                   :         :           :
+ram_addr[10]                         : 28        : output : 3.3-V LVTTL       :         : 2         : Y
+ram_ba_1                             : 30        : output : 3.3-V LVTTL       :         : 2         : Y
+ram_ba_0                             : 31        : output : 3.3-V LVTTL       :         : 2         : Y
+ram_ras_n                            : 32        : output : 3.3-V LVTTL       :         : 2         : Y
+hsync_oc                             : 33        : output : 3.3-V LVTTL       :         : 2         : Y
+vsync_oc                             : 39        : output : 3.3-V LVTTL       :         : 3         : Y
+blu[4]                               : 42        : output : 3.3-V LVTTL       :         : 3         : Y
+RESERVED_INPUT_WITH_WEAK_PULLUP      : 43        :        :                   :         : 3         :
+blu[3]                               : 44        : output : 3.3-V LVTTL       :         : 3         : Y
+vid[14]                              : 46        : bidir  : 3.3-V LVTTL       :         : 3         : Y
+blu[0]                               : 49        : output : 3.3-V LVTTL       :         : 3         : Y
+blu[2]                               : 50        : output : 3.3-V LVTTL       :         : 3         : Y
+blu[1]                               : 51        : output : 3.3-V LVTTL       :         : 3         : Y
+vid[13]                              : 52        : input  : 3.3-V LVTTL       :         : 3         : Y
+vid[12]                              : 53        : input  : 3.3-V LVTTL       :         : 3         : Y
+vid[11]                              : 54        : input  : 3.3-V LVTTL       :         : 3         : Y
+vid[10]                              : 58        : bidir  : 3.3-V LVTTL       :         : 4         : Y
+grn[5]                               : 59        : output : 3.3-V LVTTL       :         : 4         : Y
+vid[9]                               : 60        : bidir  : 3.3-V LVTTL       :         : 4         : Y
+grn[4]                               : 64        : output : 3.3-V LVTTL       :         : 4         : Y
+grn[3]                               : 65        : output : 3.3-V LVTTL       :         : 4         : Y
+vid[8]                               : 66        : bidir  : 3.3-V LVTTL       :         : 4         : Y
+grn[2]                               : 67        : output : 3.3-V LVTTL       :         : 4         : Y
+vid[7]                               : 68        : bidir  : 3.3-V LVTTL       :         : 4         : Y
+grn[1]                               : 69        : output : 3.3-V LVTTL       :         : 4         : Y
+vid[6]                               : 71        : bidir  : 3.3-V LVTTL       :         : 4         : Y
+grn[0]                               : 72        : output : 3.3-V LVTTL       :         : 4         : Y
+vid[5]                               : 76        : bidir  : 3.3-V LVTTL       :         : 5         : Y
+red[4]                               : 77        : output : 3.3-V LVTTL       :         : 5         : Y
+vid[4]                               : 79        : bidir  : 3.3-V LVTTL       :         : 5         : Y
+red[3]                               : 80        : output : 3.3-V LVTTL       :         : 5         : Y
+red[2]                               : 83        : output : 3.3-V LVTTL       :         : 5         : Y
+red[1]                               : 85        : output : 3.3-V LVTTL       :         : 5         : Y
+red[0]                               : 86        : output : 3.3-V LVTTL       :         : 5         : Y
+ram_data[8]                          : 87        : bidir  : 3.3-V LVTTL       :         : 5         : Y
+vid[3]                               : 88        : input  : 3.3-V LVTTL       :         : 5         : Y
+vid[2]                               : 89        : input  : 3.3-V LVTTL       :         : 5         : Y
+vid[1]                               : 90        : input  : 3.3-V LVTTL       :         : 5         : Y
+vid[0]                               : 91        : input  : 3.3-V LVTTL       :         : 6         : Y
+CONF_DONE                            : 92        :        :                   :         : 6         :
+MSEL0                                : 94        :        :                   :         : 6         :
+ram_clk                              : 97        : output : 3.3-V LVTTL       :         : 6         : Y
+ram_udqm                             : 98        : output : 3.3-V LVTTL       :         : 6         : Y
+ram_addr[11]                         : 100       : output : 3.3-V LVTTL       :         : 6         : Y
+ram_data[11]                         : 101       : bidir  : 3.3-V LVTTL       :         : 6         : Y
+ram_addr[8]                          : 103       : output : 3.3-V LVTTL       :         : 6         : Y
+ram_data[10]                         : 104       : bidir  : 3.3-V LVTTL       :         : 6         : Y
+ram_addr[9]                          : 105       : output : 3.3-V LVTTL       :         : 6         : Y
+ram_data[9]                          : 106       : bidir  : 3.3-V LVTTL       :         : 6         : Y
+ram_addr[7]                          : 110       : output : 3.3-V LVTTL       :         : 7         : Y
+ram_data[12]                         : 111       : bidir  : 3.3-V LVTTL       :         : 7         : Y
+ram_addr[6]                          : 112       : output : 3.3-V LVTTL       :         : 7         : Y
+ram_data[13]                         : 113       : bidir  : 3.3-V LVTTL       :         : 7         : Y
+ram_addr[5]                          : 114       : output : 3.3-V LVTTL       :         : 7         : Y
+ram_data[14]                         : 115       : bidir  : 3.3-V LVTTL       :         : 7         : Y
+ram_addr[4]                          : 119       : output : 3.3-V LVTTL       :         : 7         : Y
+ram_data[15]                         : 120       : bidir  : 3.3-V LVTTL       :         : 7         : Y
+ram_data[0]                          : 121       : bidir  : 3.3-V LVTTL       :         : 7         : Y
+ram_data[1]                          : 125       : bidir  : 3.3-V LVTTL       :         : 7         : Y
+clk28                                : 126       : input  : 3.3-V LVTTL       :         : 7         : Y
+mdb[5]                               : 127       : bidir  : 3.3-V LVTTL       :         : 8         : Y
+mdb[6]                               : 128       : bidir  : 3.3-V LVTTL       :         : 8         : Y
+mdb[7]                               : 129       : bidir  : 3.3-V LVTTL       :         : 8         : Y
+ram_data[2]                          : 132       : bidir  : 3.3-V LVTTL       :         : 8         : Y
+ram_data[3]                          : 133       : bidir  : 3.3-V LVTTL       :         : 8         : Y
+ram_data[4]                          : 135       : bidir  : 3.3-V LVTTL       :         : 8         : Y
+ram_data[5]                          : 136       : bidir  : 3.3-V LVTTL       :         : 8         : Y
+ram_data[6]                          : 137       : bidir  : 3.3-V LVTTL       :         : 8         : Y
+NC                                   : 140       :        :                   :         : 8         :
+ram_data[7]                          : 141       : bidir  : 3.3-V LVTTL       :         : 8         : Y
+ram_ldqm                             : 142       : output : 3.3-V LVTTL       :         : 8         : Y
+ram_we_n                             : 143       : output : 3.3-V LVTTL       :         : 8         : Y
+ram_cas_n                            : 144       : output : 3.3-V LVTTL       :         : 8         : Y
