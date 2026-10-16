@@ -1,0 +1,6 @@
+set_global_assignment -name FAMILY ACEX1K
+set_global_assignment -name DEVICE EP1K30QC208-3
+set_global_assignment -name TOP_LEVEL_ENTITY smoke
+set_global_assignment -name VHDL_FILE smoke.vhd
+set_global_assignment -name GENERATE_RBF_FILE ON
+set_global_assignment -name FMAX_REQUIREMENT "50 MHz"

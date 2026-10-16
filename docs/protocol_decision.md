@@ -69,8 +69,9 @@ The physical lines and their directions are the same as ours.
 * Against:
   * Needs a new 1k30 image (mux slave + gb relay) and a new 1k100 support
     core (CPLD joystick reader, SPI relay, 1k30 reconfiguration). ACEX 1K
-    needs Quartus II 9.1sp2 or earlier (BLOCKED.md #4), and there is no
-    1k100 source to start from.
+    needs Quartus II 9.0 Web Edition under Wine
+    ([acex_toolchain.md](acex_toolchain.md)), and there is no 1k100 source
+    to start from.
   * SD storage needs a socket wired to the 1k100's PCI header, which is a
     hardware addition. The alternative, CF through extra mux slots, needs
     the same firmware change as option B.

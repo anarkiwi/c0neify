@@ -34,7 +34,7 @@ def status(stdout):
 def test_manifest_covers_expected_assets():
     assert len(NAMES) == len(set(NAMES))
     assert all(len(row) == 5 and all(row) for row in MANIFEST)
-    assert {row[1] for row in MANIFEST} <= {"text", "pdf", "zip", "elf", "tar", "deb"}
+    assert {row[1] for row in MANIFEST} <= {"text", "pdf", "zip", "elf", "exe", "deb"}
     assert {row[2] for row in MANIFEST} == {"required", "optional"}
     for name in (
         "C1schematics.pdf",
@@ -44,6 +44,7 @@ def test_manifest_covers_expected_assets():
         "cyclone_web-13.1.0.162.qdz",
         "QuartusSetupWeb-13.0.1.232.run",
         "cyclone_web-13.0.1.232.qdz",
+        "90_quartus_free.exe",
     ):
         assert name in NAMES
 
@@ -106,7 +107,7 @@ def test_signatures(tmp_path):
         "C1minimigV201_build.zip": b"PK\x03\x04rest",
         "QuartusSetupWeb-13.1.0.162.run": b"\x7fELF\x01\x01",
         "libpng12-0_1.2.54-1ubuntu1_i386.deb": b"!<arch>\n",
-        "91sp2_quartus_free_linux.tar": b"\0" * 257 + b"ustar\0",
+        "90_quartus_free.exe": b"MZ\x90\x00",
         "C1_extender.pin": b"-- Copyright",
     }
     bad = {

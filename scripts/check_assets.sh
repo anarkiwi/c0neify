@@ -38,8 +38,8 @@ valid() {
 	pdf) [[ $head == %pdf-* ]] ;;
 	zip) [[ $head == pk$'\003\004'* ]] ;;
 	elf) [[ $head == $'\177'elf* ]] ;;
+	exe) [[ $head == mz* ]] ;;
 	deb) [[ $head == '!<arch>'* ]] ;;
-	tar) [[ $(head -c 262 -- "$2" | tail -c 5) == ustar ]] ;;
 	*) true ;;
 	esac
 }
