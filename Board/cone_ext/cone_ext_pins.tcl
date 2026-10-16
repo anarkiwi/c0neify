@@ -93,38 +93,37 @@ set_location_assignment PIN_120 -to ram_data[15]
 # "vid" bus - the 16 lines to the 1k30. In bypass mode these carry
 # RGB from the 1k30; once the extender is loaded they are the only
 # general-purpose link to the rest of the C-One, and therefore the
-# channel for keyboard, mouse, joysticks and CF/SD block traffic.
-# Port names follow cone_io (Chameleon convention); vid index and pin
-# from the manual's table; every location is also used by
-# reference/C1_extender.pin (Minimig names in brackets). Input-only
-# locations (vid[3:0], vid[13:11]) are confirmed by the Quartus 13.1
-# EP3C25E144 device database (fitter error 169009 for any other
-# direction).
+# channel for keyboard, mouse, joysticks and CF block traffic.
+# Port names follow cone_mm_link (Minimig V2.01 link); vid index and
+# pin from the manual's table; every location and direction is the
+# one reference/C1_extender.pin uses (Minimig names in brackets).
+# Input-only locations (vid[3:0], vid[13:11]) are confirmed by the
+# Quartus 13.1 EP3C25E144 device database (fitter error 169009 for
+# any other direction).
 # ---------------------------------------------------------------
-set_location_assignment PIN_91 -to mux_q[0]    ;# vid[0]  IN only [addbi[0]]
-set_location_assignment PIN_90 -to mux_q[1]    ;# vid[1]  IN only [addbi[1]]
-set_location_assignment PIN_89 -to mux_q[2]    ;# vid[2]  IN only [addbi[2]]
-set_location_assignment PIN_88 -to mux_q[3]    ;# vid[3]  IN only [addbi[3]]
-set_location_assignment PIN_79 -to mux_d[0]    ;# vid[4]  [addbo[0]]
-set_location_assignment PIN_76 -to mux_d[1]    ;# vid[5]  [addbo[1]]
-set_location_assignment PIN_71 -to mux_d[2]    ;# vid[6]  [addbo[2]]
-set_location_assignment PIN_68 -to mux_d[3]    ;# vid[7]  [addbo[3]]
-set_location_assignment PIN_66 -to mux_sel[0]  ;# vid[8]  [addbo[4]]
-set_location_assignment PIN_60 -to mux_sel[1]  ;# vid[9]  [addbo[5]]
-set_location_assignment PIN_58 -to mux_sel[2]  ;# vid[10] [addbo[6]]
-set_location_assignment PIN_54 -to vid_spare[0] ;# vid[11] IN only [sysclk]
-set_location_assignment PIN_53 -to vid_spare[1] ;# vid[12] IN only [addbi[4]]
-set_location_assignment PIN_52 -to vid_spare[2] ;# vid[13] IN only [addbi[5]]
-set_location_assignment PIN_46 -to mux_clk     ;# vid[14] [addbo[7]]
-set_location_assignment PIN_43 -to mux_sel[3]  ;# vid[15] [addbo[8]]
+set_location_assignment PIN_91 -to vid_ide_in[0]    ;# vid[0]  IN only [addbi[0]]
+set_location_assignment PIN_90 -to vid_ide_in[1]    ;# vid[1]  IN only [addbi[1]]
+set_location_assignment PIN_89 -to vid_ide_in[2]    ;# vid[2]  IN only [addbi[2]]
+set_location_assignment PIN_88 -to vid_ide_in[3]    ;# vid[3]  IN only [addbi[3]]
+set_location_assignment PIN_79 -to vid_ide_out[0]   ;# vid[4]  [addbo[0]]
+set_location_assignment PIN_76 -to vid_ide_out[1]   ;# vid[5]  [addbo[1]]
+set_location_assignment PIN_71 -to vid_ide_out[2]   ;# vid[6]  [addbo[2]]
+set_location_assignment PIN_68 -to vid_ide_out[3]   ;# vid[7]  [addbo[3]]
+set_location_assignment PIN_66 -to vid_ide_out[4]   ;# vid[8]  [addbo[4]]
+set_location_assignment PIN_60 -to vid_ide_out[5]   ;# vid[9]  [addbo[5]]
+set_location_assignment PIN_58 -to vid_spare_out    ;# vid[10] [addbo[6]]
+set_location_assignment PIN_54 -to vid_spare_in[0]  ;# vid[11] IN only [sysclk]
+set_location_assignment PIN_53 -to vid_spare_in[1]  ;# vid[12] IN only [addbi[4]]
+set_location_assignment PIN_52 -to vid_ser_in       ;# vid[13] IN only [addbi[5]]
+set_location_assignment PIN_46 -to vid_ser_out      ;# vid[14] [addbo[7]]
+set_location_assignment PIN_43 -to vid_ioclk        ;# vid[15] [addbo[8]]
 
-# Every vid-bus line is registered in its I/O element so all of them
-# share the same clock-to-pin delay: sel/d are captured by the 1k30 on
-# mux_clk, so their skew against mux_clk eats the protocol's margin.
-set_instance_assignment -name FAST_OUTPUT_REGISTER ON -to mux_clk
-set_instance_assignment -name FAST_OUTPUT_REGISTER ON -to mux_sel[*]
-set_instance_assignment -name FAST_OUTPUT_REGISTER ON -to mux_d[*]
-set_instance_assignment -name FAST_INPUT_REGISTER ON -to mux_q[*]
+# Link data lines are registered in their I/O elements so they share one
+# clock-to-pin delay against vid_ioclk (constraints.sdc).
+set_instance_assignment -name FAST_OUTPUT_REGISTER ON -to vid_ide_out[*]
+set_instance_assignment -name FAST_OUTPUT_REGISTER ON -to vid_ser_out
+set_instance_assignment -name FAST_INPUT_REGISTER ON -to vid_ide_in[*]
+set_instance_assignment -name FAST_INPUT_REGISTER ON -to vid_ser_in
 
 # ---------------------------------------------------------------
 # mdb[7:0] - the board-wide 8-bit data bus (SID, cartridge, SRAM,

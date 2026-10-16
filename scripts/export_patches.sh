@@ -59,10 +59,11 @@ for dir in Board/cone_ext templates/cone_ext; do
 	Board/*) commit "Board: add cone_ext, the C-One FPGA Extender (Cyclone III EP3C25E144C8)
 
 The extender reaches keyboard, mouse, joysticks and storage only through
-the 16 vid lines to the C-One's ACEX 1K30. cone_io multiplexes them in
-the manner of the Chameleon's CPLD mux so substitute_mcu is used with
-SPI_EXTERNALCLK. The 1k30 side and a simulation of the link are
-maintained in the cone-demistify project." ;;
+the 16 vid lines to the C-One's ACEX 1K30. cone_mm_link speaks the
+Minimig V2.01 link there, so Minimig's prebuilt 1k30/1k100 images are
+used unchanged, and cone_sd_ata answers substitute_mcu's SD commands
+with ATA transfers to the C-One's CF card through that link. Its
+simulation is maintained in the cone-demistify project." ;;
 	*) commit "templates: add cone_ext toplevel template" ;;
 	esac
 done
