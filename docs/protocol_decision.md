@@ -6,8 +6,10 @@
 the extender speaks Minimig's link protocol, so the extender adopts it.
 Storage keeps DeMiSTify's firmware unchanged: an SD-over-SPI to ATA
 bridge on the extender answers the firmware's SD commands with ATA PIO
-transfers through the IDE tunnel. The implementation is in progress;
-`cone_io` remains in the tree until it is replaced.
+transfers through the IDE tunnel. **Implemented** as
+`Board/cone_ext/cone_mm_link.vhd` and `Board/cone_ext/cone_sd_ata.vhd`
+([minimig_link.md](minimig_link.md)); `cone_io` and its 1k30 slave are
+kept in `fallback/`.
 
 Citations: `src:` = `reference/C1minimigV201_source.zip`, `build:` =
 `reference/C1minimigV201_build.zip`, `M:` = `reference/Cone_core_development.pdf`
@@ -57,7 +59,7 @@ The physical lines and their directions are the same as ours.
   readme's 1k30 fix). `build:support.rbf` (1k100) has no source in either
   archive.
 
-## Option A: keep our protocol (current tree)
+## Option A: keep our protocol (now `fallback/`)
 
 `cone_io` + `cone_1k30_mux_slave`, documented in [vidbus.md](vidbus.md).
 
@@ -114,3 +116,7 @@ toolchain, sources and simulation already exist. Most of this repo still
 applies under B: the pins, PLL, SDRAM, template, CI and asset handling.
 `cone_io`/`cone_1k30_mux_slave` and the vid-bus testbench would be kept
 as the fallback, or retired.
+
+As implemented, the storage drawback above did not apply: the SD-to-ATA
+bridge in the extender keeps DeMiSTify's firmware and `substitute_mcu`
+unchanged, and the guest's audio stays on the sigma-delta pins.

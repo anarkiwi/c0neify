@@ -1,8 +1,10 @@
-# vid-bus protocol
+# vid-bus protocol (fallback)
 
-Extender side: `Board/cone_ext/cone_io.vhd`. 1k30 side:
-`cone_1k30/cone_1k30_mux_slave.vhd`. The header of `cone_io.vhd` is the
-normative description; this page adds the timing analysis and the
+The board target uses Minimig's link ([minimig_link.md](minimig_link.md)).
+This protocol is kept in `fallback/` for a custom 1k30 image (BLOCKED.md
+#4) and still runs in simulation. Extender side: `fallback/cone_io.vhd`.
+1k30 side: `fallback/cone_1k30_mux_slave.vhd`. The header of `cone_io.vhd`
+is the normative description; this page adds the timing analysis and the
 simulation results.
 
 ## Lines
@@ -61,8 +63,9 @@ and MISO delay up to about 80 ns.
 
 ## Simulation
 
-`scripts/sim.sh` builds `sim/tb_vidbus.vhd` with GHDL and runs the case
-matrix in `scripts/run_sim.py` in parallel. The testbench puts both
+`scripts/sim.sh` builds `fallback/tb_vidbus.vhd` with GHDL and runs its
+nominal cases (`vidbus_*`; `--vidbus-sweep` adds the sweep) from
+`scripts/run_sim.py`. The testbench puts both
 modules back to back over 16 delayed wires, with the extender's
 input-only lines driven only from the 1k30 side, and checks:
 

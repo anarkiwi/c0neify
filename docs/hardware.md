@@ -9,18 +9,14 @@ with the FPGA Extender, loaded from CF by NewBoot. No JTAG cable is needed.
 |---|---|
 | Extender bitstream (`cone_ext`) | builds, fits, meets timing, pins verified against `C1_extender.pin` |
 | 1k100 / 1k30 images | Minimig V2.01 `support.rbf` / `support.bin`, reused unchanged ([protocol_decision.md](protocol_decision.md), option B) |
-| vid-bus link speaking Minimig's protocol | **not yet implemented**: the extender still speaks the original `cone_io` protocol |
-| Storage (SD over SPI bridged to ATA on the CF slot) | **not yet implemented** |
+| vid-bus link speaking Minimig's protocol (`cone_mm_link`) | implemented; passes simulation against a 1k30 model and against Minimig's own `1k30/acex.vhd` ([minimig_link.md](minimig_link.md)); not yet run on hardware |
+| Storage: SD over SPI bridged to ATA on the CF slot (`cone_sd_ata`) | implemented; DeMiSTify's SD init, sector reads and writes pass simulation against a CF model; not yet run on hardware |
+| Keyboard, mouse, joysticks, TxD | through the link; simulated |
+| Audio | guest audio on the extender's sigma1/sigma2 pins as before; the 1k30's DAC gets silence |
 
-Until the last two rows are done, a card built today exercises
-configuration, the PLL, SDRAM and VGA output. Keyboard, joysticks and
-storage do not work, so the firmware cannot load `BBC.ROM`.
-
-The current extender bitstream is safe to run with Minimig's 1k30 image.
-That image clocks its whole link from vid[15] (`src:1k30/acex.vhd`
-IOclk). Our extender drives vid[15] as `mux_sel[3]`, which stays low
-after reset (no slot uses `sel >= 8`), so the 1k30 never starts an IDE
-cycle on the CF card.
+Nothing beyond configuration, the PLL, SDRAM and VGA has been seen on a
+real C-One yet. The link's round-trip delay on the board is the main
+unknown (`BLOCKED.md` #3).
 
 ## You need
 
@@ -84,8 +80,9 @@ From `NewbootV201.zip` (`readme.txt`, `readme_minimig.txt`):
    `c1dcores/Sdram_haus/select.raw` from the NewBoot archive.
 5. To start the core at power-on without the menu ("direktcore"), copy the
    files of `c1dcores/bbc/` over the root files, as `readme.txt` describes.
-6. Once storage works, `BBC.ROM` belongs in the root of the card the
-   firmware reads (`ROM_FILENAME` in the core's `firmware/config.h`).
+6. `BBC.ROM` goes in the root of the card (`ROM_FILENAME` in the core's
+   `firmware/config.h`); the firmware reads the same CF card through the
+   SD-to-ATA bridge, addressing it by LBA.
 
 ## 3. Boot
 
@@ -94,14 +91,15 @@ From `NewbootV201.zip` (`readme.txt`, `readme_minimig.txt`):
 2. Select the BBC entry. NewBoot loads `extender.rbf` into the extender,
    `support.rbf` into the 1k100 and `support.bin` into SRAM, then the
    1k100 reconfigures the 1k30 (manual section 4.3).
-3. Expected today: the extender drives VGA itself (sync through the
-   open-collector drivers), at the BBC core's video timing. The control
-   firmware finds no storage.
+3. Expected: the extender drives VGA itself (sync through the
+   open-collector drivers), at the BBC core's video timing, and the
+   control firmware loads `BBC.ROM` from the card. F12 on the PS/2
+   keyboard opens the OSD.
 
 ## If something is wrong
 
 * No picture after selecting the core: check that `extender.rbf` is the
-  `BBC_cone_ext.rbf` from this build (325 KB) and that the build log shows
+  `BBC_cone_ext.rbf` from this build (about 325 KB, compressed) and that the build log shows
   `timing met` and `82 assignments, 0 virtual` at the pin check.
 * Garbage on screen: the guest runs from the 27.09 MHz clock derived from
   the 14.31818 MHz crystal (+0.33 %); monitors that are strict about

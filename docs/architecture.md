@@ -25,14 +25,15 @@ through the 1k30 over the vid bus.
 
 ## vid bus
 
-Of the 16 vid lines only 9 are bidirectional from the extender side, so
-the link is 4 bits out + 4 bits in + 4 select + clock, the shape of the
-Chameleon's CPLD mux. The Minimig V2.01 core uses the same lines with a
-different protocol; [protocol_decision.md](protocol_decision.md) compares
-the two. `cone_io.vhd` (extender) and
-`cone_1k30/cone_1k30_mux_slave.vhd` (1k30) implement it so
-`substitute_mcu` is used unchanged with `SPI_EXTERNALCLK => true`.
-Protocol, slot map, timing windows and simulated rates: [vidbus.md](vidbus.md).
+The extender speaks Minimig V2.01's link over the vid lines
+(`cone_mm_link.vhd`): IOclk out on vid[15], one serial line each way
+(vid[14], vid[13]) for PS/2, TxD, joysticks and audio, six lines out
+(vid[9:4]) and four in (vid[3:0]) for an IDE tunnel to the C-One's CF
+slot. `cone_sd_ata.vhd` turns substitute_mcu's SD commands into ATA
+transfers through that tunnel, so the firmware is unchanged. Protocol,
+timing windows and simulation: [minimig_link.md](minimig_link.md). The
+earlier mux protocol ([vidbus.md](vidbus.md)) is kept in `fallback/`;
+[protocol_decision.md](protocol_decision.md) compares the two.
 
 ## SDRAM
 
@@ -66,23 +67,18 @@ support.bin (1k30 image into SRAM) -> target.rbf (1k100, reconfigures the
 c1dcores/<core>/
   select.raw       icon
   extender.rbf     the DeMiSTified MiST core
-  support.rbf      1k100: SRAM loader
-  support.bin      1k30 image = cone_1k30_mux_slave + PS/2 + gb relay
-  target.rbf       1k100: joystick reader (ioshift/pclk), SD relay, 1k30 reconfig logic
+  support.rbf      1k100: Minimig V2.01's, unchanged
+  support.bin      1k30: Minimig V2.01's, unchanged (1k30/acex.vhd + gdemux)
 ```
 
-* **1k30** owns the PS/2 pins (203/202/200/199) and the vid bus. It needs
-  the mux slave plus a gb[] relay.
+* **1k30** owns the PS/2 pins (203/202/200/199), the IDE/CF pins and the
+  vid bus; Minimig's image bridges all three to the link.
 * **1k100** owns `ioshift`/`pclk` (joysticks via the 7064 CPLD), the
-  SRAM, and the 1k30-reconfigure block from the manual. If the SD socket
-  is on the PCI header it also relays SPI. The Minimig V2.01 source is the
-  reference implementation for this side.
+  SRAM, and the 1k30-reconfigure block from the manual; Minimig's
+  `support.rbf` relays the joystick stream to the 1k30 on gb[5].
 
-## Storage options
+## Storage
 
-1. SD socket on the 1k100 PCI header (32 x 5 V-tolerant I/O per the
-   manual), SPI relayed 1k100 -> gb[] -> 1k30 -> vid -> extender. No
-   firmware changes; `cone_io`'s SPI slot carries it.
-2. CF card via the 1k30's mass-storage pins: replace DeMiSTify's SPI/SD
-   block layer with an ATA PIO driver whose register accesses use further
-   mux slots. Keeps the machine stock; more work on both sides.
+The C-One's CF slot, through the 1k30's IDE pins and the link's IDE
+tunnel, with `cone_sd_ata` presenting it to the firmware as an SDHC card.
+An SD socket would need a hardware addition (the 1k100 PCI header).
