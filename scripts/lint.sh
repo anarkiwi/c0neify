@@ -5,6 +5,7 @@
 #   Verilog  verilator --lint-only on any .v/.sv we own
 #   shell    bash -n + shellcheck on scripts/*.sh
 #   python   black --check + pylint on scripts/ and tests/
+#   actions  actionlint on .github/workflows when installed
 #   pins     verify_pins.py when reference/C1_extender.pin is present
 #   sim      scripts/sim.sh unless LINT_NO_SIM=1
 set -euo pipefail
@@ -68,6 +69,13 @@ if ((${#PY[@]})); then
 	step "Python: ${#PY[@]} files"
 	black --check --quiet "${PY[@]}"
 	pylint --score=n "${PY[@]}"
+fi
+
+if [[ -x build/tools/actionlint ]] || command -v actionlint >/dev/null; then
+	step "actionlint"
+	PATH=$ROOT/build/tools:$PATH actionlint
+else
+	step "actionlint not installed (scripts/get_actionlint.sh), skipped"
 fi
 
 if [[ -f reference/C1_extender.pin ]]; then

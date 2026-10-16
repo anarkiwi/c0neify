@@ -77,7 +77,7 @@ def test_dry_run_prints_commands(tmp_path):
     root = "" if os.geteuid() == 0 else "sudo-stub "
     assert cmds[:2] == [
         f"{root}dpkg --add-architecture i386",
-        f"{root}apt-get update",
+        f"{root}env TMPDIR=/var/tmp apt-get update",
     ]
     install = cmds[2].split()
     assert install[install.index("apt-get") + 1 : install.index("libc6:i386")] == [
@@ -87,17 +87,32 @@ def test_dry_run_prints_commands(tmp_path):
     ]
     assert {"libc6:i386", "libstdc++6:i386", "libgtk2.0-0:i386"} <= set(install)
     run_path = tmp_path / RUNFILE
-    assert cmds[3] == f"chmod +x {run_path}"
-    assert cmds[4] == (
-        f"{run_path} --mode unattended --unattendedmodeui none "
+    stage = re.search(r"staging installer in (\S+)", res.stdout)[1]
+    assert cmds[3:6] == [
+        f"cp --dereference -- {run_path} {stage}/",
+        f"cp --dereference -- {tmp_path / 'cyclone_web-13.1.0.162.qdz'} {stage}/",
+        f"chmod +x {stage}/{RUNFILE}",
+    ]
+    assert cmds[6] == (
+        f"{stage}/{RUNFILE} --mode unattended --unattendedmodeui none "
         f"--installdir {prefix} --disable-components "
         "quartus_help,modelsim_ase,modelsim_ae"
     )
-    assert cmds[5] == f"{prefix}/quartus/bin/quartus_sh --version"
-    assert len(cmds) == 6
+    assert cmds[7] == f"{prefix}/quartus/bin/quartus_sh --version"
+    assert len(cmds) == 8
     assert "would remove under" in res.stdout
     assert not os.access(run_path, os.X_OK)
-    assert not prefix.exists()
+    assert not prefix.exists() and not Path(stage).exists()
+
+
+def test_executable_installer_runs_in_place(tmp_path):
+    run_path = tmp_path / RUNFILE
+    run_path.write_bytes(b"")
+    run_path.chmod(0o755)
+    res = run("--dry-run", ref=tmp_path)
+    cmds = commands(res.stdout)
+    assert "staging" not in res.stdout and not any(c.startswith("cp ") for c in cmds)
+    assert any(f"{run_path} --mode unattended" in c for c in cmds)
 
 
 def test_prune_only(tmp_path):
