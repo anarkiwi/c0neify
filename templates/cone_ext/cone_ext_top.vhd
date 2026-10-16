@@ -113,6 +113,9 @@ architecture rtl of cone_ext_top is
 	signal joy1 : std_logic_vector(demistify_joybits-1 downto 0);
 	signal joy2 : std_logic_vector(demistify_joybits-1 downto 0);
 
+-- SDRAM address from guest (13 bits; the extender wires A[11:0])
+	signal sdram_a : std_logic_vector(12 downto 0);
+
 -- Video from guest
 	signal vga_hsync, vga_vsync : std_logic;
 	signal vga_red, vga_green, vga_blue : std_logic_vector(7 downto 0);
@@ -196,13 +199,21 @@ begin
 		button_menu_n => menu_button_n
 	);
 
-	-- Joystick bit order expected by substitute_mcu: directions in the low
-	-- four bits, buttons at demistify_button1.. (active high).
-	joy1 <= (others => '0');
-	joy2 <= (others => '0');
-	-- TODO: map c64_joy1/2 (active low: fire2 fire1 right left down up)
-	-- into joy1/joy2 using demistify_button1/2 from demistify_config_pkg,
-	-- as chameleon_mergeinputs does. Left as zeros so the template compiles.
+	-- C-One ports -> substitute_mcu joystick words (active low, buttons at
+	-- the core's demistify_button1/2 positions).
+	mergeinputs : entity work.cone_mergeinputs
+	generic map (
+		joybits => demistify_joybits,
+		button1 => demistify_button1,
+		button2 => demistify_button2
+	)
+	port map (
+		clk => clk_100,
+		joy_a => c64_joy1,
+		joy_b => c64_joy2,
+		joy1_out => joy1,
+		joy2_out => joy2
+	);
 
 -- -----------------------------------------------------------------------
 -- Guest core
@@ -217,8 +228,7 @@ begin
 		LED => led_red,
 		-- SDRAM. Guest cores drive 13 address bits; A[12] has no pin.
 		SDRAM_DQ => ram_data,
-		SDRAM_A(11 downto 0) => ram_addr,
-		SDRAM_A(12) => open,
+		SDRAM_A => sdram_a,
 		SDRAM_DQML => ram_ldqm,
 		SDRAM_DQMH => ram_udqm,
 		SDRAM_nWE => ram_we_n,
@@ -248,6 +258,8 @@ begin
 		AUDIO_R => sigma_r
 	);
 
+	ram_addr <= sdram_a(11 downto 0);
+
 	-- VGA: extender has 5/6/5 bits and open-collector sync drivers.
 	red <= unsigned(vga_red(7 downto 3));
 	grn <= unsigned(vga_green(7 downto 2));
@@ -262,6 +274,7 @@ begin
 
 	controller : entity work.substitute_mcu
 	generic map (
+		joybits => demistify_joybits,
 		sysclk_frequency => 500,
 		debug => false,
 		jtag_uart => false,

@@ -135,8 +135,11 @@ set_location_assignment PIN_129 -to mdb[7]
 #   * the "few global signals from the geek-port"
 #   * any SDRAM nCS / CKE if they are not hardwired
 # ---------------------------------------------------------------
-# set_location_assignment PIN_?? -to sigma_l
-# set_location_assignment PIN_?? -to sigma_r
+# Until the DAC pins are known the audio outputs are virtual, so the fitter
+# cannot auto-place them onto a pin that is wired to something else.
+# Replace these two lines with set_location_assignment from the .pin file.
+set_instance_assignment -name VIRTUAL_PIN ON -to sigma_l
+set_instance_assignment -name VIRTUAL_PIN ON -to sigma_r
 
 # I/O standard: the whole bank set is 3.3 V LVTTL on the extender.
 set_global_assignment -name STRATIX_DEVICE_IO_STANDARD "3.3-V LVTTL"

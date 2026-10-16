@@ -1,0 +1,24 @@
+# Quartus
+db/
+incremental_db/
+output_files/
+*.rbf
+*.sof
+*.qws
+*.rpt
+*.summary
+*.smsg
+*.done
+*.jdi
+*.pin.bak
+
+# Gated / proprietary inputs live here but are never committed
+reference/*
+!reference/README.md
+!reference/.gitkeep
+
+# Local build, sim and test artefacts
+build/
+__pycache__/
+.pytest_cache/
+.coverage

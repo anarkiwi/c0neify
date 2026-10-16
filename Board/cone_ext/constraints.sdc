@@ -2,7 +2,8 @@
 create_clock -name "clk28" -period 35.242ns [get_ports {clk28}]
 create_clock -name "clk14" -period 69.841ns [get_ports {clk14}]
 
-# Host PLL: hostclocks (clk28 -> c0 = 100 MHz vid-bus/SDRAM, c1 = 50 MHz controller)
+# Host PLL: hostclocks (clk14 -> c0 = 100 MHz vid-bus/SDRAM, c1 = 50 MHz
+# controller, c2 = 27 MHz guest CLOCK_27)
 set hostclk {clocks|altpll_component|auto_generated|pll1|clk[1]}
 set supportclk {clocks|altpll_component|auto_generated|pll1|clk[0]}
 
