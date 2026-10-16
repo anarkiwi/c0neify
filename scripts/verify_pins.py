@@ -9,7 +9,7 @@ from typing import NamedTuple
 USER_DIRS = frozenset({"input", "output", "bidir"})
 RESERVED_RE = re.compile(
     r"^(?:GND|VCC|RESERVED|~|MSEL|NC$|n(?:CONFIG|STATUS|CEO?|CSO)$"
-    r"|CONF_DONE$|DCLK$|DATA\d$|ASDO$|T(?:CK|DI|DO|MS)$)"
+    r"|CONF_DONE$|DCLK$|DATA\d$|ASDO$|T(?:CK|DI|DO|MS)$|altera_reserved_)"
 )
 LOC_RE = re.compile(
     r"^\s*set_location_assignment\s+PIN_(\S+)\s+-to\s+[{\"]?([^\s;}\"]+)", re.M

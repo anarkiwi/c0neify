@@ -51,3 +51,10 @@ scripts/make_cfcard.sh --core NAME --rbf output_files/NAME.rbf --out card/ \
 
 Support files missing from both the command line and
 `C1minimigV201_build.zip` become zero-byte `<name>.MISSING` placeholders.
+
+## Checksums of the files used
+
+```
+5e950cb854c8584ba43fede650cded40e79534f1fa31ba43a7eb18d61f177ba9  QuartusSetupWeb-13.1.0.162.run
+7d65dfa5edf8965dc45b54f34c34b9eef2e7f3a9c293377b4dfe6a4e71845db6  cyclone_web-13.1.0.162.qdz
+```

@@ -1,32 +1,35 @@
 # cone_ext architecture
 
 Hardware facts here come from Peter Wendrich, *C-One core development*
-(syntiac.com / iComp wiki), section 13 "Pins and Signals", unless marked
-otherwise. Items marked **unverified** are tracked in `BLOCKED.md`.
+(syntiac.com / iComp wiki), section 13 "Pins and Signals", cross-checked
+against `reference/C1_extender.pin` (all locations match) and
+`reference/C1_extender_schem.pdf`. Items marked **unverified** are tracked
+in `BLOCKED.md`.
 
 ## Pin budget
 
-`Board/cone_ext/cone_ext_pins.tcl` assigns 80 pins from the manual's
-extender column:
+`Board/cone_ext/cone_ext_pins.tcl` assigns 82 pins (Quartus reports 83
+usable on the EP3C25E144 with this configuration):
 
 | Group | Pins | Notes |
 |---|---|---|
 | clocks | 2 | 14.31818 MHz (pin 55), 28.37516 MHz (pin 126) |
 | VGA | 18 | red 5, grn 6, blu 5, nHSync, nVSync (sync is open-collector: drive pin '1' to pull low) |
-| SDRAM | 36 | 12 addr, 16 data, clk, ras, cas, we, 2 ba, 2 dqm. No nCS/CKE listed: assumed hardwired (**unverified**) |
-| vid bus | 16 | the only link to the 1k30. vid[3:0] = pins 91..88 = CLK4..7, input-only; vid[13:11] input-only |
-| mdb | 8 | board data bus, owned by 1k30/1k100, left tri-stated. mdb[3:0] = pins 25..22 = CLK0..3, input-only |
+| SDRAM | 36 | 12 addr, 16 data, clk, ras, cas, we, 2 ba, 2 dqm. CKE tied to V33 and nCS to ground on the board (schematic) |
+| vid bus | 16 | the only link to the 1k30. vid[3:0] = pins 91..88 = CLK4..7 and vid[13:11] are input-only (manual; Quartus device database) |
+| mdb | 8 | board data bus, owned by 1k30/1k100. mdb[3:0] (pins 25..22) and mdb[7:5] (pins 127..129) are input-only locations, so the port is an input |
+| audio | 2 | sigma1 PIN_10, sigma2 PIN_11 (pin file, schematic): sigma-delta outputs, RC-filtered to the geek port's SID1/SID2 external-audio inputs |
 
-Not in the manual's table: the audio DAC pins (`sigma_l`/`sigma_r` are
-virtual pins until `C1_extender.pin` gives them) and the geek-port
-globals. There are no spare extender pins for an SD socket, so storage is
-reached through the 1k30 over the vid bus.
+There are no spare extender pins for an SD socket, so storage is reached
+through the 1k30 over the vid bus.
 
 ## vid bus
 
 Of the 16 vid lines only 9 are bidirectional from the extender side, so
 the link is 4 bits out + 4 bits in + 4 select + clock, the shape of the
-Chameleon's CPLD mux. `cone_io.vhd` (extender) and
+Chameleon's CPLD mux. The Minimig V2.01 core uses the same lines with a
+different protocol; [protocol_decision.md](protocol_decision.md) compares
+the two. `cone_io.vhd` (extender) and
 `cone_1k30/cone_1k30_mux_slave.vhd` (1k30) implement it so
 `substitute_mcu` is used unchanged with `SPI_EXTERNALCLK => true`.
 Protocol, slot map, timing windows and simulated rates: [vidbus.md](vidbus.md).
@@ -36,9 +39,10 @@ Protocol, slot map, timing windows and simulated rates: [vidbus.md](vidbus.md).
 16 MB: 128 Mbit x16, 4 banks x 4096 rows x 512 columns: 12 row bits,
 9 column bits (`SDRAM_ROWBITS=12`, `Board_SDRAM_RowBits = 12`). Guest
 cores usually assume 13 row bits / 32 MB; the template drops
-`SDRAM_A[12]` and memory-size options must be capped at 16 MB. The
-timing macros in `cone_ext_support.tcl` are generic placeholders until the
-part number is read from the schematic (**unverified**).
+`SDRAM_A[12]` and memory-size options must be capped at 16 MB. The fitted
+part is a Samsung K4S281632-UC60 (schematic); the timing macros in
+`cone_ext_support.tcl` are placeholders until checked against its
+datasheet (**unverified**).
 
 ## Clocks
 

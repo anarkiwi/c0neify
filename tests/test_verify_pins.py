@@ -13,7 +13,8 @@ sys.path.insert(0, str(ROOT / "scripts"))
 import verify_pins as vp  # pylint: disable=wrong-import-position
 
 PIN = ROOT / "tests" / "fixtures" / "synthetic_extender.pin"
-TCL = ROOT / "Board" / "cone_ext" / "cone_ext_pins.tcl"
+TCL = ROOT / "tests" / "fixtures" / "synthetic_pins.tcl"
+BOARD_TCL = ROOT / "Board" / "cone_ext" / "cone_ext_pins.tcl"
 MINIMIG = ["ram_addr[0]=sdram_addr[0]", "ram_addr[1]=sdram_addr[1]"]
 HEADER = (
     'CHIP "t" ASSIGNED TO AN: EP3C25E144C8\n\n'
@@ -47,6 +48,7 @@ def test_parse_pin_file():
     by_loc = {r.loc: r for r in rows}
     assert by_loc["91"] == vp.PinRow("vid[0]", "91", "input")
     assert by_loc["12"].name == "~ALTERA_ASDO_DATA1~ / RESERVED_INPUT"
+    assert not by_loc["17"].user and by_loc["17"].name == "altera_reserved_tck"
     assert by_loc["10"].direction == ""
     assert sum(r.user for r in rows) == 79
     assert not any(by_loc[k].user for k in ("1", "4", "5", "9", "12", "20", "21"))
@@ -137,7 +139,7 @@ def test_loc_key_sorting():
 def test_main_default_and_strict(capsys):
     assert vp.main([str(PIN), str(TCL)]) == 1
     out = capsys.readouterr().out
-    assert out.startswith("96 .pin rows (79 user), 80 assignments, 2 virtual")
+    assert out.startswith("97 .pin rows (79 user), 80 assignments, 2 virtual")
     assert vp.main([str(PIN), str(TCL), "--strict"]) == 1
 
 
@@ -168,3 +170,10 @@ def test_main_parse_errors(tmp_path, capsys):
     assert "no pin table header" in capsys.readouterr().err
     assert vp.main([str(tmp_path / "missing.pin"), str(TCL)]) == 2
     assert vp.main([str(PIN), str(TCL), "--alias", "a=b=c=d", "--alias", "x"]) == 2
+
+
+def test_board_tcl_parses():
+    ours, virtual = vp.parse_tcl(BOARD_TCL)
+    assert len(ours) == 82 and not virtual
+    assert ours["sigma_l"] == "10" and ours["mux_q[0]"] == "91"
+    assert len(set(ours.values())) == len(ours)

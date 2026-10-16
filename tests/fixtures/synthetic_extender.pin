@@ -16,6 +16,7 @@ sdram_addr[0]                        : 8         : output : 3.3-V LVTTL       : 
 VCCIO1                               : 9         : power  :                   : 3.3V    : 1         :
 RESERVED_INPUT_WITH_WEAK_PULLUP      : 10        :        :                   :         : 1         :
 ~ALTERA_ASDO_DATA1~ / RESERVED_INPUT : 12        : input  :                   :         : 1         :
+altera_reserved_tck          : 17        : input  : 3.3-V LVTTL       :         : 1         : N
 mdb[4]                               : 13        : bidir  : 3.3-V LVTTL       :         : 1         : Y
 nSTATUS                              : 14        :        :                   :         : 1         :
 TCK                                  : 15        : input  :                   :         : 1         :
