@@ -69,7 +69,7 @@ jobs:
 
       - name: sim logs
         if: failure()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: sim-logs
           path: build/sim/logs/
@@ -203,7 +203,7 @@ jobs:
 
       - name: artifacts
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: cone_ext-${{ github.sha }}
           if-no-files-found: warn
