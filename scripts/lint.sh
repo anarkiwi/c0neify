@@ -61,7 +61,9 @@ for f in scripts/*.sh; do
 done
 shellcheck -x scripts/*.sh
 
-mapfile -t PY < <(git ls-files -- 'scripts/*.py' 'tests/*.py')
+shopt -s nullglob
+PY=(scripts/*.py tests/*.py)
+shopt -u nullglob
 if ((${#PY[@]})); then
 	step "Python: ${#PY[@]} files"
 	black --check --quiet "${PY[@]}"

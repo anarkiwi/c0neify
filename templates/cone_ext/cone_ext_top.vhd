@@ -68,12 +68,6 @@ architecture rtl of cone_ext_top is
 	signal reset : std_logic;
 	signal reset_n : std_logic;
 
--- vid-bus mux
-	signal mux_clk : std_logic;
-	signal mux_sel : unsigned(3 downto 0);
-	signal mux_d : unsigned(3 downto 0);
-	signal mux_q : unsigned(3 downto 0);
-
 -- LEDs
 	signal led_green : std_logic;
 	signal led_red : std_logic;
@@ -151,26 +145,25 @@ begin
 	end process;
 
 -- -----------------------------------------------------------------------
--- vid-bus pin mapping (see cone_io.vhd header for the budget)
+-- vid bus to the 1k30 (pin budget and protocol: cone_io.vhd header)
 -- -----------------------------------------------------------------------
-	vid(14) <= mux_clk;
-	vid(7 downto 4) <= std_logic_vector(mux_d);
-	vid(10 downto 8) <= std_logic_vector(mux_sel(2 downto 0));
-	vid(15) <= mux_sel(3);
-	vid(3 downto 0) <= (others => 'Z');     -- input-only pins anyway
-	vid(13 downto 11) <= (others => 'Z');   -- input-only; spare status inputs
-	mux_q <= unsigned(vid(3 downto 0));
-
 	mdb <= (others => 'Z');
 
+	-- Link timing: mux_clk = clk_100 / (2 * MUX_DIV); q sampled Q_LAT
+	-- clk_100 cycles after each mux_clk rise, which tolerates a round trip
+	-- (extender -> 1k30 -> extender) of up to Q_LAT * 10 ns minus margin.
+	-- The board's round trip is not yet measured (BLOCKED.md); these values
+	-- leave room for one of up to ~19 ns. sim/tb_vidbus.vhd checks them.
 	myIO : entity work.cone_io
+	generic map (
+		MUX_DIV => 2,
+		Q_LAT => 2,
+		MISO_VISITS => 1
+	)
 	port map (
 		clk_mux => clk_100,
 		reset => reset,
-		mux_clk => mux_clk,
-		mux_sel => mux_sel,
-		mux_d => mux_d,
-		mux_q => mux_q,
+		vid => vid,
 
 		spi_cs_n => mmc_cs,
 		spi_raw_clk => spi_clk,
