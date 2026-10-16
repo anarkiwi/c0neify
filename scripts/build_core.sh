@@ -84,4 +84,5 @@ if [[ ! -f $ROM ]]; then
 fi
 
 step "CF card"
-scripts/make_cfcard.sh --core "${PROJECT,,}" --rbf "$RBF" --out build/cfcard --rom "$ROM"
+scripts/make_cfcard.sh --core "${PROJECT,,}" --rbf "$RBF" --out build/cfcard --rom "$ROM" \
+	--label " BBC Micro (DeMiSTify)"

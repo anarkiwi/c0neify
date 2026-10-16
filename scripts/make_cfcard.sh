@@ -2,7 +2,8 @@
 # Assemble a NewBoot core directory OUT/c1dcores/<core>/.
 # Usage: make_cfcard.sh --core NAME --rbf PATH --out DIR [--icon select.raw]
 #          [--support-rbf PATH] [--support-bin PATH] [--target-rbf PATH]
-#          [--rom FILE]... [--reference DIR] [--strict]
+#          [--rom FILE]... [--label TEXT] [--reference DIR] [--strict]
+#   --label writes select.txt, the text NewBoot's selector shows for the core.
 #   Support files not given explicitly come from reference/C1minimigV201_build.zip
 #   when present, otherwise a zero-byte <name>.MISSING placeholder is written.
 #   Exit 3 with --strict if any placeholder was written.
@@ -16,7 +17,7 @@ SUPPORT=(support.rbf support.bin target.rbf)
 
 usage() {
 	[[ -n ${1-} ]] && printf 'make_cfcard: %s\n' "$1" >&2
-	sed -n '2,9s/^# \{0,1\}//p' "$0" >&2
+	sed -n '2,10s/^# \{0,1\}//p' "$0" >&2
 	exit 2
 }
 die() {
@@ -72,6 +73,7 @@ while (($#)); do
 	--support-bin) SRC[support.bin]=$v ;;
 	--target-rbf) SRC[target.rbf]=$v ;;
 	--rom) roms+=("$v") ;;
+	--label) label=$v ;;
 	--reference) REF=$v ;;
 	*) usage "unknown option $k" ;;
 	esac
@@ -118,6 +120,10 @@ for f in "${roms[@]}"; do
 	cp -- "$f" "$dest/"
 	row "${f##*/}" copied "$f"
 done
+if [[ -n ${label:-} ]]; then
+	printf '%s\n' "$label" >"$dest/select.txt"
+	row select.txt written "--label"
+fi
 printf '%s: %d placeholder(s)\n' "$dest" "$placeholders"
 ((strict && placeholders)) && exit 3
 exit 0

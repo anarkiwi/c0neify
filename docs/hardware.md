@@ -26,8 +26,10 @@ cycle on the CF card.
 
 * C-One with FPGA Extender (Cyclone III EP3C25), VGA monitor, PS/2
   keyboard.
-* A CF card and reader, with NewBoot V2.01 installed (iComp wiki,
-  `File:NewbootV201.zip`; see its instructions for preparing the card).
+* A CF card (FAT) and reader.
+* NewBoot V2.01, `NewbootV201.zip` from the iComp wiki
+  (https://wiki.icomp.de/w/images/3/33/NewbootV201.zip). The
+  `File:NewbootV201.zip` wiki page itself is HTML, not the archive.
 * Either a local build (below) or the `cone_ext-<sha>` artifact of the
   `build` workflow's `synth` job.
 
@@ -55,6 +57,7 @@ build/cfcard/c1dcores/bbc/
   support.rbf           1k100 image, from C1minimigV201_build.zip
   support.bin           1k30 image, from C1minimigV201_build.zip
   bbc.rom               ROM image fetched from mist-devel/mist-binaries
+  select.txt            selector text
   select.raw.MISSING    no menu icon is generated (see step 2)
   target.rbf.MISSING    not used: Minimig's support.rbf reconfigures the 1k30
 ```
@@ -64,14 +67,24 @@ Check timing yourself with
 
 ## 2. Prepare the CF card
 
-1. Install NewBoot V2.01 on the card as its instructions describe.
-2. Copy `build/cfcard/c1dcores/bbc/` to `c1dcores/bbc/` on the card.
-3. Delete the zero-byte `*.MISSING` placeholders.
-4. For a menu icon, copy `select.raw` (and `select.txt`, the menu text)
-   from another core directory, for example the Minimig one in
-   `C1minimigV201_build.zip`, and edit `select.txt`. The icon format is
-   not documented here.
-5. Once storage works, `BBC.ROM` belongs in the root of the card the
+From `NewbootV201.zip` (`readme.txt`, `readme_minimig.txt`):
+
+1. Copy the archive's contents to the root of the FAT CF card. The root
+   `extender.rbf` (206 KB) is the bypass core that routes the 1k30's video
+   through the extender; without it the VGA output stays black once the
+   extender is fitted.
+2. If the C-One is not yet running NewBoot, test cores from the BigBoot
+   menu ("Config 0") first, then flash NewBoot with the `updater` core, as
+   `readme.txt` describes.
+3. Copy `build/cfcard/c1dcores/bbc/` to `c1dcores/bbc/` on the card and
+   delete the zero-byte `*.MISSING` placeholders. `select.txt` (written by
+   `make_cfcard.sh --label`) is the text shown in NewBoot's selector.
+4. Every core directory has a `select.raw` icon (25600 bytes). Until this
+   repo generates one, copy any core's `select.raw`, for example
+   `c1dcores/Sdram_haus/select.raw` from the NewBoot archive.
+5. To start the core at power-on without the menu ("direktcore"), copy the
+   files of `c1dcores/bbc/` over the root files, as `readme.txt` describes.
+6. Once storage works, `BBC.ROM` belongs in the root of the card the
    firmware reads (`ROM_FILENAME` in the core's `firmware/config.h`).
 
 ## 3. Boot

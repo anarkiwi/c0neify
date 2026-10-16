@@ -134,3 +134,11 @@ def test_errors(paths, tmp_path):
     assert bad_core.returncode == 1
     assert base(paths, "--rom", tmp_path / "absent.rom").returncode == 1
     assert not out.exists()
+
+
+def test_label_writes_select_txt(paths):
+    _, _, out = paths
+    res = base(paths, "--label", " BBC Micro")
+    assert res.returncode == 0, res.stderr
+    assert (out / "c1dcores" / "bbc" / "select.txt").read_text() == " BBC Micro\n"
+    assert "select.txt" in res.stdout and "written" in res.stdout
