@@ -17,16 +17,17 @@ W=build/lint
 rm -rf "$W"
 mkdir -p "$W/altera_mf" "$W/work08" "$W/work93"
 
-OWN_VHDL=(Board/cone_ext/*.vhd templates/cone_ext/*.vhd cone_1k30/*.vhd)
+FALLBACK=(fallback/cone_io.vhd fallback/cone_1k30_mux_slave.vhd)
+OWN_VHDL=(Board/cone_ext/*.vhd templates/cone_ext/*.vhd "${FALLBACK[@]}")
 # Board templates instantiate "component guest"; each core renames it to its
 # own guest entity. Lint a copy renamed to the stub package's guest_top.
 mkdir -p "$W/templates"
 for f in templates/*/*_top.vhd; do
 	sed -E 's/(:[[:space:]]*component[[:space:]]+)guest\b/\1guest_top/I' "$f" >"$W/templates/${f##*/}"
 done
-ELAB_VHDL=(Board/cone_ext/*.vhd "$W"/templates/*.vhd cone_1k30/*.vhd)
-# Must stay VHDL-93 clean: these are shared with the 1k30 build.
-VHDL93=(cone_1k30/*.vhd Board/cone_ext/cone_mergeinputs.vhd)
+ELAB_VHDL=(Board/cone_ext/*.vhd "$W"/templates/*.vhd "${FALLBACK[@]}")
+# Must stay VHDL-93 clean: these are shared with the (fallback) 1k30 build.
+VHDL93=(fallback/cone_1k30_mux_slave.vhd Board/cone_ext/cone_mergeinputs.vhd)
 STUBS=(sim/demistify_stub/*.vhd)
 GHDL08=(--std=08 --workdir="$W/work08" -P"$W/altera_mf")
 
