@@ -20,7 +20,7 @@
 -- Clocking (cfide.vhd:515-531): IOclk = clk / 2, toggled on rising clk
 -- edges. Everything below runs on the rising clk edge that raises IOclk
 -- ("tick"), where the inputs are sampled; the outputs computed there are
--- re-registered on the falling clk edge while IOclk is high, so they
+-- re-registered on the following falling clk edge, so they
 -- change half a clk period after IOclk rises and the 1k30 samples them at
 -- the next IOclk rise (acex.vhd:86-87). Data the 1k30 launches at IOclk
 -- rise k is sampled at tick k+1, so the round trip (IOclk out to vid in)
@@ -132,14 +132,14 @@ begin
 	joy_a <= ja;
 	joy_b <= jb;
 
-	-- cfide.vhd:517-520, cyclone.vhd:99-102
+	-- cfide.vhd:517-520, cyclone.vhd:99-102 load these on the falling edge
+	-- while IOclk is high; ide_next and ser_next change only on ticks, so
+	-- loading on every falling edge is the same and needs no IOclk enable.
 	process(clk)
 	begin
 		if falling_edge(clk) then
-			if ioclk = '1' then
-				ide_o <= ide_next;
-				ser_o <= ser_next;
-			end if;
+			ide_o <= ide_next;
+			ser_o <= ser_next;
 		end if;
 	end process;
 

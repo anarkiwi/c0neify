@@ -125,11 +125,14 @@ def mm_case(name: str, rt_ps: int, skew_ps: int, acex: bool, **gen) -> Case:
 
 
 def mm_cases(sweep: bool, acex: bool) -> list[Case]:
-    """tb_mmlink cases: the firmware's own timing, then the wire-delay sweep."""
-    cases = [mm_case("firmware", 6000, 0, acex)]
+    """tb_mmlink cases: firmware timing, a 1k30 that starts late, the sweep."""
+    fast = {"SLOWBIT": 2, "SPIN_BYTES": 4, "FULL": "false", "PS2_HALF_NS": 5000}
+    cases = [
+        mm_case("firmware", 6000, 0, acex),
+        mm_case("late_k30", 6000, 0, acex, K30_START_NS=500000, **fast),
+    ]
     if not sweep:
         return cases
-    fast = {"SLOWBIT": 2, "SPIN_BYTES": 4, "FULL": "false", "PS2_HALF_NS": 5000}
     for rt in range(0, 30001, 2500):
         cases.append(mm_case(f"sweep_rt{rt}", rt, 0, acex, **fast))
     for skew in range(2500, 17501, 2500):

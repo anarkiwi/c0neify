@@ -92,7 +92,7 @@ architecture rtl of cone_ext_top is
 	signal spi_clk : std_logic;
 
 -- IDE register access (cone_sd_ata -> cone_mm_link)
-	signal ide_req, ide_wr, ide_ack : std_logic;
+	signal ide_req, ide_wr, ide_ack, link_ok : std_logic;
 	signal ide_reg : std_logic_vector(2 downto 0);
 	signal ide_wdata, ide_rdata : std_logic_vector(15 downto 0);
 
@@ -185,7 +185,7 @@ begin
 
 		txd => rs232_txd,
 		rxd => open,
-		sync_ok => open,
+		sync_ok => link_ok,
 
 		joy_a => cone_joy_a,
 		joy_b => cone_joy_b,
@@ -205,6 +205,7 @@ begin
 		spi_sck => spi_clk,
 		spi_mosi => spi_mosi,
 		spi_miso => spi_miso,
+		link_ok => link_ok,
 		ide_req => ide_req,
 		ide_wr => ide_wr,
 		ide_reg => ide_reg,

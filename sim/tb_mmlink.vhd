@@ -34,6 +34,7 @@ entity tb_mmlink is
 		SECTORS : positive := 30000000;
 		PS2_HALF_NS : positive := 30000;
 		C2M_NS : positive := 500;
+		K30_START_NS : natural := 0;
 		FULL : boolean := true
 	);
 end entity;
@@ -123,6 +124,8 @@ architecture sim of tb_mmlink is
 	signal idea : std_logic_vector(2 downto 0);
 	signal dior_n, diow_n, cs0_n, cs1_n, k30_txd, lrclk, adat : std_logic;
 	signal c2mhz : std_logic := '0';
+	signal k30_on : boolean := false;
+	signal k30_ioclk : std_logic;
 	signal ioshift : std_logic := '1';
 	signal joy_ta, joy_tb : unsigned(5 downto 0) := (others => '1');
 
@@ -195,7 +198,7 @@ begin
 	port map (
 		clk => clk_100, reset => reset,
 		spi_cs_n => spi_cs_n, spi_sck => spi_sck, spi_mosi => spi_mosi, spi_miso => bridge_miso,
-		ide_req => ide_req, ide_wr => ide_wr, ide_reg => ide_reg,
+		link_ok => sync_ok, ide_req => ide_req, ide_wr => ide_wr, ide_reg => ide_reg,
 		ide_wdata => ide_wdata, ide_rdata => ide_rdata, ide_ack => ide_ack
 	);
 
@@ -235,14 +238,19 @@ begin
 	-- 1k30
 	-- -------------------------------------------------------------------
 	addonin <= k30_in;
-	k30_vid(13 downto 11) <= addonout(5 downto 4) & '0';
-	k30_vid(3 downto 0) <= addonout(3 downto 0);
+	-- Until K30_START_NS the 1k30 runs another image: no IOclk reaches the
+	-- link logic and the extender's inputs carry a constant pattern that
+	-- reads as status 5555 (BSY clear, DRDY set) and never toggles sync.
+	k30_on <= true after K30_START_NS * 1 ns;
+	k30_ioclk <= k30_vid(15) when k30_on else '0';
+	k30_vid(13 downto 11) <= addonout(5 downto 4) & '0' when k30_on else "010";
+	k30_vid(3 downto 0) <= addonout(3 downto 0) when k30_on else "0101";
 
 	real_k30 : if K30_REAL generate
 		k30 : component acex
 		port map (
 			ide1irq => '1', addonin => addonin, C2MHz => c2mhz, ioshift => ioshift,
-			IOclk => k30_vid(15), kb_clk => kb_clk, kb_data => kb_data, ms_clk => ms_clk, ms_data => ms_data,
+			IOclk => k30_ioclk, kb_clk => kb_clk, kb_data => kb_data, ms_clk => ms_clk, ms_data => ms_data,
 			addonout => addonout, idedata => idedata, idea => idea, ide_wr => diow_n, ide_rd => dior_n,
 			ide_csp0 => cs0_n, ide_css0 => cs1_n, TxD => k30_txd, lrclk => lrclk, adat => adat
 		);
@@ -251,7 +259,7 @@ begin
 		k30 : entity work.k30_mm_model
 		port map (
 			ide1irq => '1', addonin => addonin, C2MHz => c2mhz, ioshift => ioshift,
-			IOclk => k30_vid(15), kb_clk => kb_clk, kb_data => kb_data, ms_clk => ms_clk, ms_data => ms_data,
+			IOclk => k30_ioclk, kb_clk => kb_clk, kb_data => kb_data, ms_clk => ms_clk, ms_data => ms_data,
 			addonout => addonout, idedata => idedata, idea => idea, ide_wr => diow_n, ide_rd => dior_n,
 			ide_csp0 => cs0_n, ide_css0 => cs1_n, TxD => k30_txd, lrclk => lrclk, adat => adat
 		);
@@ -276,7 +284,7 @@ begin
 		variable t_edge, t_chg : time := 0 ns;
 	begin
 		wait on k30_vid(15), k30_in;
-		if running and now > 2 us then
+		if running and sync_ok = '1' then
 			if rising_edge(k30_vid(15)) then
 				k30_setup <= minimum(k30_setup, now - t_chg);
 				t_edge := now;
@@ -294,7 +302,7 @@ begin
 		variable t_edge, t_chg : time := 0 ns;
 	begin
 		wait on ext_vid(15), ext_in;
-		if running and now > 2 us then
+		if running and sync_ok = '1' then
 			if rising_edge(ext_vid(15)) then
 				ext_setup <= minimum(ext_setup, now - t_chg);
 				t_edge := now;
@@ -308,11 +316,15 @@ begin
 		end if;
 	end process;
 
+	-- 'X' is contention, 'Z' an undriven line; 'U' is a register before
+	-- its first clock edge
 	drive_check : process(idedata, ext_vid, k30_vid)
 	begin
 		if running then
-			assert not is_x(ext_vid) and not is_x(k30_vid) report "vid line undriven or in contention: " & to_string(ext_vid) & " " & to_string(k30_vid)
-				severity error;
+			for i in ext_vid'range loop
+				assert ext_vid(i) /= 'X' and ext_vid(i) /= 'Z' and k30_vid(i) /= 'X' and k30_vid(i) /= 'Z'
+					report "vid(" & integer'image(i) & ") undriven or in contention" severity error;
+			end loop;
 			for i in idedata'range loop
 				assert idedata(i) /= 'X' report "IDE data bus contention" severity error;
 			end loop;
@@ -321,7 +333,7 @@ begin
 
 	sync_check : process
 	begin
-		wait until running;
+		wait until running and k30_on;
 		wait until sync_ok = '1' for 20 us;
 		assert sync_ok = '1' report "link did not lock" severity failure;
 		t_sync <= now;
@@ -476,7 +488,7 @@ begin
 
 		constant LBAS : integer_vector := (16#1234567#, 0, SECTORS - 1);
 	begin
-		wait until running and sync_ok = '1';
+		wait until running;
 		t0 := now;
 		-- sd_init, spi_sd.c:262-303
 		for i in 1 to 7 loop
@@ -676,9 +688,10 @@ begin
 	-- Audio: the 1k30's lrclk/adat (re-timed to C2MHz falling). Each
 	-- channel is 24 C2MHz periods; MSB first from the 8th period after the
 	-- lrclk change; lrclk low carries the left sample (cyclone.vhd:171-201).
+	-- The first change after lock may end a channel the 1k30 joined late.
 	-- -------------------------------------------------------------------
 	audio_check : process
-		variable k : natural := 0;
+		variable k, edges : natural := 0;
 		variable last : std_logic := 'U';
 		variable word : std_logic_vector(15 downto 0);
 		variable good : natural := 0;
@@ -687,6 +700,7 @@ begin
 		if running and sync_ok = '1' then
 			if lrclk /= last then
 				k := 0;
+				edges := edges + 1;
 			else
 				k := k + 1;
 			end if;
@@ -694,7 +708,7 @@ begin
 			if k >= 8 and k <= 23 then
 				word(23 - k) := adat;
 			end if;
-			if k = 23 then
+			if k = 23 and edges >= 2 then
 				assert (lrclk = '0' and word = AUDIO_L) or (lrclk = '1' and word = AUDIO_R)
 					report "audio channel " & std_logic'image(lrclk) & " got " & to_hstring(word) severity error;
 				good := good + 1;

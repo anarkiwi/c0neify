@@ -123,7 +123,7 @@ begin
 			if a'event or cs0_n'event then
 				t_addr := now;
 			end if;
-			assert to_x01(cs1_n) = '1' report "ATA: CS1 asserted" severity error;
+			assert to_x01(cs1_n) /= '0' report "ATA: CS1 asserted" severity error;
 
 			if to_x01(cs0_n) = '0' and falling_edge(dior_n) then
 				t_fall := now;

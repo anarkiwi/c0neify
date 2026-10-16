@@ -4,18 +4,18 @@ Date: Fri, 16 Oct 2026 00:00:00 +0000
 Subject: [PATCH 2/2] templates: add cone_ext toplevel template
 
 ---
- templates/cone_ext/cone_ext_top.vhd | 337 ++++++++++++++++++++++++++++
+ templates/cone_ext/cone_ext_top.vhd | 338 ++++++++++++++++++++++++++++
  templates/cone_ext/top.qip          |   1 +
- 2 files changed, 338 insertions(+)
+ 2 files changed, 339 insertions(+)
  create mode 100644 templates/cone_ext/cone_ext_top.vhd
  create mode 100644 templates/cone_ext/top.qip
 
 diff --git a/templates/cone_ext/cone_ext_top.vhd b/templates/cone_ext/cone_ext_top.vhd
 new file mode 100644
-index 0000000..442d305
+index 0000000..d190c47
 --- /dev/null
 +++ b/templates/cone_ext/cone_ext_top.vhd
-@@ -0,0 +1,337 @@
+@@ -0,0 +1,338 @@
 +-- -----------------------------------------------------------------------
 +-- Toplevel template for the C-One FPGA Extender (DeMiSTify target "cone_ext")
 +--
@@ -110,7 +110,7 @@ index 0000000..442d305
 +	signal spi_clk : std_logic;
 +
 +-- IDE register access (cone_sd_ata -> cone_mm_link)
-+	signal ide_req, ide_wr, ide_ack : std_logic;
++	signal ide_req, ide_wr, ide_ack, link_ok : std_logic;
 +	signal ide_reg : std_logic_vector(2 downto 0);
 +	signal ide_wdata, ide_rdata : std_logic_vector(15 downto 0);
 +
@@ -203,7 +203,7 @@ index 0000000..442d305
 +
 +		txd => rs232_txd,
 +		rxd => open,
-+		sync_ok => open,
++		sync_ok => link_ok,
 +
 +		joy_a => cone_joy_a,
 +		joy_b => cone_joy_b,
@@ -223,6 +223,7 @@ index 0000000..442d305
 +		spi_sck => spi_clk,
 +		spi_mosi => spi_mosi,
 +		spi_miso => spi_miso,
++		link_ok => link_ok,
 +		ide_req => ide_req,
 +		ide_wr => ide_wr,
 +		ide_reg => ide_reg,

@@ -14,18 +14,18 @@ simulation is maintained in the cone-demistify project.
  Board/cone_ext/Board_Config.vhd     |   7 +
  Board/cone_ext/board.mk             |   2 +
  Board/cone_ext/cone_ext_defs.tcl    |   8 +
- Board/cone_ext/cone_ext_opts.tcl    |  40 ++++
+ Board/cone_ext/cone_ext_opts.tcl    |  40 +++
  Board/cone_ext/cone_ext_pins.tcl    | 158 ++++++++++++
  Board/cone_ext/cone_ext_support.tcl |  22 ++
  Board/cone_ext/cone_mergeinputs.vhd |  56 +++++
- Board/cone_ext/cone_mm_link.vhd     | 307 ++++++++++++++++++++++++
- Board/cone_ext/cone_sd_ata.vhd      | 359 ++++++++++++++++++++++++++++
+ Board/cone_ext/cone_mm_link.vhd     | 307 +++++++++++++++++++++++
+ Board/cone_ext/cone_sd_ata.vhd      | 361 ++++++++++++++++++++++++++++
  Board/cone_ext/constraints.sdc      |  73 ++++++
  Board/cone_ext/gen_reset.vhd        |  91 +++++++
  Board/cone_ext/hostclocks.qip       |   1 +
  Board/cone_ext/hostclocks.vhd       | 175 ++++++++++++++
  Board/cone_ext/pin_aliases.txt      |  76 ++++++
- 14 files changed, 1375 insertions(+)
+ 14 files changed, 1377 insertions(+)
  create mode 100644 Board/cone_ext/Board_Config.vhd
  create mode 100644 Board/cone_ext/board.mk
  create mode 100644 Board/cone_ext/cone_ext_defs.tcl
@@ -378,7 +378,7 @@ index 0000000..781964e
 +end architecture;
 diff --git a/Board/cone_ext/cone_mm_link.vhd b/Board/cone_ext/cone_mm_link.vhd
 new file mode 100644
-index 0000000..3609758
+index 0000000..050a202
 --- /dev/null
 +++ b/Board/cone_ext/cone_mm_link.vhd
 @@ -0,0 +1,307 @@
@@ -404,7 +404,7 @@ index 0000000..3609758
 +-- Clocking (cfide.vhd:515-531): IOclk = clk / 2, toggled on rising clk
 +-- edges. Everything below runs on the rising clk edge that raises IOclk
 +-- ("tick"), where the inputs are sampled; the outputs computed there are
-+-- re-registered on the falling clk edge while IOclk is high, so they
++-- re-registered on the following falling clk edge, so they
 +-- change half a clk period after IOclk rises and the 1k30 samples them at
 +-- the next IOclk rise (acex.vhd:86-87). Data the 1k30 launches at IOclk
 +-- rise k is sampled at tick k+1, so the round trip (IOclk out to vid in)
@@ -516,14 +516,14 @@ index 0000000..3609758
 +	joy_a <= ja;
 +	joy_b <= jb;
 +
-+	-- cfide.vhd:517-520, cyclone.vhd:99-102
++	-- cfide.vhd:517-520, cyclone.vhd:99-102 load these on the falling edge
++	-- while IOclk is high; ide_next and ser_next change only on ticks, so
++	-- loading on every falling edge is the same and needs no IOclk enable.
 +	process(clk)
 +	begin
 +		if falling_edge(clk) then
-+			if ioclk = '1' then
-+				ide_o <= ide_next;
-+				ser_o <= ser_next;
-+			end if;
++			ide_o <= ide_next;
++			ser_o <= ser_next;
 +		end if;
 +	end process;
 +
@@ -691,10 +691,10 @@ index 0000000..3609758
 +end architecture;
 diff --git a/Board/cone_ext/cone_sd_ata.vhd b/Board/cone_ext/cone_sd_ata.vhd
 new file mode 100644
-index 0000000..65ab5a3
+index 0000000..fe53194
 --- /dev/null
 +++ b/Board/cone_ext/cone_sd_ata.vhd
-@@ -0,0 +1,359 @@
+@@ -0,0 +1,361 @@
 +-- -----------------------------------------------------------------------
 +-- cone_sd_ata.vhd
 +--
@@ -758,7 +758,9 @@ index 0000000..65ab5a3
 +		spi_mosi : in std_logic;
 +		spi_miso : out std_logic;
 +
-+		-- cone_mm_link IDE port (CS0)
++		-- cone_mm_link IDE port (CS0); ATA commands start only while
++		-- link_ok (sync_ok) shows Minimig's 1k30 image is running
++		link_ok : in std_logic;
 +		ide_req : out std_logic;
 +		ide_wr : out std_logic;
 +		ide_reg : out std_logic_vector(2 downto 0);
@@ -889,7 +891,7 @@ index 0000000..65ab5a3
 +			ram_we <= '0';
 +
 +			-- ATA sequencer
-+			if step = 0 and go = '1' then
++			if step = 0 and go = '1' and link_ok = '1' then
 +				step <= 1;
 +				go <= '0';
 +				failed <= '0';

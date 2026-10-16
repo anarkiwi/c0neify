@@ -86,7 +86,7 @@ def test_cases_unique_and_sweeps_have_both_outcomes():
         assert {c.expect for c in cases if c.expect is not None} == {True, False}
         assert all(c.required for c in cases if c.expect is None)
     acex = run_sim.mm_cases(False, True)
-    assert [c.name for c in acex] == ["acex_firmware"]
+    assert [c.name for c in acex] == ["acex_firmware", "acex_late_k30"]
     assert acex[0].generics["K30_REAL"] == "true" and "-fsynopsys" in acex[0].flags
     assert run_sim.Case("x", {"B": 2, "A": 1}).args() == ["-gA=1", "-gB=2"]
     assert len(run_sim.vidbus_cases(False)) == 5
@@ -157,3 +157,5 @@ def test_main_selects_cases(fake_cmd, tmp_path, monkeypatch):
     assert run_sim.main(argv + ["--no-sweep", "--only", "ideal"]) == 0
     assert run_sim.main(argv + ["--no-sweep", "--acex", "--only", "firmware"]) == 1
     assert seen == [["vidbus_div1_q1_ideal"], ["mm_firmware", "acex_firmware"]]
+    assert run_sim.main(argv + ["--no-sweep", "--only", "late_k30"]) == 1
+    assert seen[-1] == ["mm_late_k30"]

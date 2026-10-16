@@ -61,7 +61,9 @@ entity cone_sd_ata is
 		spi_mosi : in std_logic;
 		spi_miso : out std_logic;
 
-		-- cone_mm_link IDE port (CS0)
+		-- cone_mm_link IDE port (CS0); ATA commands start only while
+		-- link_ok (sync_ok) shows Minimig's 1k30 image is running
+		link_ok : in std_logic;
 		ide_req : out std_logic;
 		ide_wr : out std_logic;
 		ide_reg : out std_logic_vector(2 downto 0);
@@ -192,7 +194,7 @@ begin
 			ram_we <= '0';
 
 			-- ATA sequencer
-			if step = 0 and go = '1' then
+			if step = 0 and go = '1' and link_ok = '1' then
 				step <= 1;
 				go <= '0';
 				failed <= '0';
