@@ -49,6 +49,7 @@ the link and storage pass simulation but have not run on hardware yet.
 
 ## Documentation
 
+* [docs/programming.md](docs/programming.md): the C-One's FPGAs, loading, buses, connector access, bring-up order
 * [docs/architecture.md](docs/architecture.md): pin budget, SDRAM, clocks, NewBoot layout, storage options
 * [docs/hardware.md](docs/hardware.md): building a CF card and booting a core on a real C-One
 * [docs/minimig_link.md](docs/minimig_link.md): Minimig link and SD-to-ATA bridge, timing windows, simulation and synthesis results

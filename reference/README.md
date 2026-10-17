@@ -21,6 +21,16 @@ present; the list lives in `scripts/assets.tsv`.
 | `QuartusSetupWeb-13.0.1.232.run` | Intel FPGA download centre: Archives, Quartus II Web Edition 13.0sp1, Individual Files tab | alternative toolchain |
 | `cyclone_web-13.0.1.232.qdz` | same Individual Files tab | Cyclone device support for 13.0sp1 |
 | `90_quartus_free.exe` (optional) | Intel FPGA download centre: Archives, Quartus II Web Edition 9.0, Windows | ACEX 1K (1k30/1k100) builds (`scripts/build_acex.sh`, [docs/acex_toolchain.md](../docs/acex_toolchain.md)) |
+| `Minimig_source211108.zip` (optional) | iComp wiki / syntiac.com C-One downloads | Minimig 2008 source (extender, 1k30, NTSC) |
+| `Snapshot_ver1.26.zip` (optional) | iComp wiki / syntiac.com C-One downloads | Minimig snapshot: extender and 1k30 projects |
+| `Symb_cpc_source.zip` (optional) | iComp wiki / syntiac.com C-One downloads | SymbOS CPC: extender and 1k30 projects |
+| `VC20_V12.zip` (optional) | iComp wiki / syntiac.com C-One downloads | 1k100 VIC-20 project with GBridge and ioshift |
+| `Bigpicview.zip` (optional) | iComp wiki / syntiac.com C-One downloads | 1k100 project with GBridge and SDRAM |
+| `Picview.zip` (optional) | iComp wiki / syntiac.com C-One downloads | 1k100 project with GBridge |
+| `Pong_chapter1.zip` (optional) | iComp wiki / syntiac.com C-One downloads | 1k100 project with gbmux |
+| `reconfig1k30_example.zip` (optional) | iComp wiki / syntiac.com C-One downloads | 1k100 reconfiguration of the 1k30 (cone_reconfig1k30) |
+| `cone_800x600_test_v3.zip` (optional) | iComp wiki / syntiac.com C-One downloads | extender VGA test core, bring-up step 2 |
+| `fpga64_029.zip` (optional) | iComp wiki / syntiac.com C-One downloads | FPGA-64 0.29 card files, standard support.rbf loader |
 | `libpng12-0_1.2.54-1ubuntu1_i386.deb` (optional) | packages.ubuntu.com, xenial | Quartus 13.x GUI dependency |
 
 `check_assets.sh` reports each file as present, missing or invalid; a

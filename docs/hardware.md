@@ -18,6 +18,9 @@ Nothing beyond configuration, the PLL, SDRAM and VGA has been seen on a
 real C-One yet. The link's round-trip delay on the board is the main
 unknown (`BLOCKED.md` #3).
 
+The order in which to test a new board, from NewBoot alone up to this
+core, is in [programming.md](programming.md#hardware-bring-up-order).
+
 ## You need
 
 * C-One with FPGA Extender (Cyclone III EP3C25), VGA monitor, PS/2
