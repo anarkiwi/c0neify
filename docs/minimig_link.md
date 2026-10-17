@@ -13,7 +13,8 @@ unchanged. Two board modules implement it:
   the C-One's CF card through the link's IDE port.
 
 `substitute_mcu` and its firmware are unchanged. Citations: `src:` =
-`reference/C1minimigV201_source.zip`, `spi_sd.c` =
+`third_party/C1minimigV201_source/` (`gdemux.tdf` only in
+`reference/C1minimigV201_source.zip`), `spi_sd.c` =
 `DeMiSTify/firmware/spi_sd.c`.
 
 ```
@@ -188,9 +189,9 @@ SPI and ATA sides. Write errors cannot be reported:
 * the 1k30: `sim/models/k30_mm_model.vhd`, written from the protocol
   above and stricter than the hardware (it flags any link word the
   extender should not send), or Minimig's own `1k30/acex.vhd` (`acex_*`
-  cases, extracted by `sim.sh` into `build/` when
-  `reference/C1minimigV201_source.zip` is present, with its internal
-  signals initialised to the ACEX's power-up '0');
+  cases, `third_party/C1minimigV201_source/1k30/acex.vhd` copied by
+  `sim.sh` into `build/` with its internal signals initialised to the
+  ACEX's power-up '0');
 * `sim/models/ata_device_model.vhd`: a CF card with IDENTIFY, BSY/DRQ
   timing, a sector store, ERR for LBAs beyond the card, and assertions on
   the task-file protocol (no writes while BSY or DRQ, CS1 unused, sector

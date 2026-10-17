@@ -1,7 +1,10 @@
 # reference/
 
-Gated inputs that cannot be redistributed. Everything here except this
-file is gitignored; every script degrades gracefully when a file is absent.
+Gated inputs that cannot be redistributed, and the original archives of
+the GPL/LGPL files vendored in [third_party/](../third_party/README.md)
+(`vendored` in `scripts/assets.tsv`, kept as provenance). Everything here
+except this file is gitignored; every script degrades gracefully when a
+file is absent.
 `scripts/check_assets.sh` (`--json`, `--require NAME`) reports what is
 present; the list lives in `scripts/assets.tsv`.
 
@@ -13,7 +16,7 @@ present; the list lives in `scripts/assets.tsv`.
 | `A1k100.pin`, `A1k30.pin` | iComp wiki, C-One page | pin assignments for the 1k100 / 1k30 support cores |
 | `Gbridge.tdf` | iComp wiki, C-One page | 1k100/1k30 gb[] bridge reference |
 | `C1schematics.pdf` | iComp wiki, C-One page | PS/2, CPLD and IDE/CF wiring on the main board |
-| `C1minimigV201_source.zip` | iComp wiki, C-One page | protocol comparison with Minimig; support-core sources |
+| `C1minimigV201_source.zip` (vendored) | iComp wiki, C-One page | provenance of `third_party/C1minimigV201_source/`; `1k30/gdemux.tdf` for the 1k30 rebuild |
 | `C1minimigV201_build.zip` | iComp wiki, C-One page | prebuilt `support.rbf` / `support.bin` (`scripts/make_cfcard.sh`) |
 | `NewbootV201.zip` | iComp wiki, `File:NewbootV201.zip` page, download link (not the page itself) | NewBoot CF card layout |
 | `QuartusSetupWeb-13.1.0.162.run` | Intel FPGA download centre: Archives, Quartus II Web Edition 13.1, Individual Files tab | synthesis (`scripts/install_quartus.sh`) |
@@ -28,8 +31,8 @@ present; the list lives in `scripts/assets.tsv`.
 | `Bigpicview.zip` (optional) | iComp wiki / syntiac.com C-One downloads | 1k100 project with GBridge and SDRAM |
 | `Picview.zip` (optional) | iComp wiki / syntiac.com C-One downloads | 1k100 project with GBridge |
 | `Pong_chapter1.zip` (optional) | iComp wiki / syntiac.com C-One downloads | 1k100 project with gbmux |
-| `reconfig1k30_example.zip` (optional) | iComp wiki / syntiac.com C-One downloads | 1k100 reconfiguration of the 1k30 (cone_reconfig1k30) |
-| `cone_800x600_test_v3.zip` (optional) | iComp wiki / syntiac.com C-One downloads | extender VGA test core, bring-up step 2 |
+| `reconfig1k30_example.zip` (vendored) | iComp wiki / syntiac.com C-One downloads | provenance of `third_party/reconfig1k30_example/` |
+| `cone_800x600_test_v3.zip` (vendored) | iComp wiki / syntiac.com C-One downloads | provenance of `third_party/cone_800x600_test_v3/` |
 | `fpga64_029.zip` (optional) | iComp wiki / syntiac.com C-One downloads | FPGA-64 0.29 card files, standard support.rbf loader |
 | `libpng12-0_1.2.54-1ubuntu1_i386.deb` (optional) | packages.ubuntu.com, xenial | Quartus 13.x GUI dependency |
 
@@ -68,4 +71,7 @@ Support files missing from both the command line and
 5e950cb854c8584ba43fede650cded40e79534f1fa31ba43a7eb18d61f177ba9  QuartusSetupWeb-13.1.0.162.run
 7d65dfa5edf8965dc45b54f34c34b9eef2e7f3a9c293377b4dfe6a4e71845db6  cyclone_web-13.1.0.162.qdz
 31c251c8c9e61ed627bcae71af874e40da53bd1df461ad5d2fa747298faaeb5b  90_quartus_free.exe
+0e6a1ba036b6dcfb4a717d479fdcba25bff7a7eb485aebf00220857216115df0  C1minimigV201_source.zip
+2f457afd2071c6d4c45bc4d66ba0b178c45a0aaf0377f4ac8cedd06407dddf68  reconfig1k30_example.zip
+44a403a60f5574e4ff557c7e13face7ae996093e0db8f39a7c7d758257c55d6f  cone_800x600_test_v3.zip
 ```

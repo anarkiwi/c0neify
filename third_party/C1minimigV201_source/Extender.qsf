@@ -1,0 +1,188 @@
+# Copyright (C) 1991-2008 Altera Corporation
+# Your use of Altera Corporation's design tools, logic functions 
+# and other software and tools, and its AMPP partner logic 
+# functions, and any output files from any of the foregoing 
+# (including device programming or simulation files), and any 
+# associated documentation or information are expressly subject 
+# to the terms and conditions of the Altera Program License 
+# Subscription Agreement, Altera MegaCore Function License 
+# Agreement, or other applicable license agreement, including, 
+# without limitation, that your use is for the sole purpose of 
+# programming logic devices manufactured by Altera and sold by 
+# Altera or its authorized distributors.  Please refer to the 
+# applicable agreement for further details.
+
+
+# The default values for assignments are stored in the file
+#		Extender_assignment_defaults.qdf
+# If this file doesn't exist, and for assignments not listed, see file
+#		assignment_defaults.qdf
+
+# Altera recommends that you do not modify this file. This
+# file is updated automatically by the Quartus II software
+# and any changes you make may be lost or overwritten.
+
+
+set_global_assignment -name FAMILY "Cyclone III"
+set_global_assignment -name DEVICE EP3C25E144C8
+set_global_assignment -name TOP_LEVEL_ENTITY Extender
+set_global_assignment -name ORIGINAL_QUARTUS_VERSION 8.1
+set_global_assignment -name PROJECT_CREATION_TIME_DATE "23:44:45  NOVEMBER 15, 2008"
+set_global_assignment -name LAST_QUARTUS_VERSION 9.1
+set_global_assignment -name USE_GENERATED_PHYSICAL_CONSTRAINTS OFF -section_id eda_blast_fpga
+set_global_assignment -name DEVICE_FILTER_PIN_COUNT 144
+set_global_assignment -name DEVICE_FILTER_SPEED_GRADE 8
+set_global_assignment -name MIN_CORE_JUNCTION_TEMP 0
+set_global_assignment -name MAX_CORE_JUNCTION_TEMP 85
+set_global_assignment -name NOMINAL_CORE_SUPPLY_VOLTAGE 1.2V
+set_global_assignment -name USE_TIMEQUEST_TIMING_ANALYZER OFF
+set_global_assignment -name POWER_PRESET_COOLING_SOLUTION "23 MM HEAT SINK WITH 200 LFPM AIRFLOW"
+set_global_assignment -name POWER_BOARD_THERMAL_MODEL "NONE (CONSERVATIVE)"
+set_global_assignment -name USE_CONFIGURATION_DEVICE OFF
+set_global_assignment -name OPTIMIZE_HOLD_TIMING "ALL PATHS"
+set_global_assignment -name FITTER_EFFORT "STANDARD FIT"
+set_global_assignment -name SMART_RECOMPILE ON
+set_global_assignment -name PARTITION_NETLIST_TYPE SOURCE -section_id Top
+set_global_assignment -name PARTITION_COLOR 16764057 -section_id Top
+set_global_assignment -name LL_ROOT_REGION ON -section_id "Root Region"
+set_global_assignment -name LL_MEMBER_STATE LOCKED -section_id "Root Region"
+set_global_assignment -name CYCLONEIII_CONFIGURATION_SCHEME "PASSIVE SERIAL"
+set_global_assignment -name FORCE_CONFIGURATION_VCCIO ON
+set_global_assignment -name CYCLONEII_RESERVE_NCEO_AFTER_CONFIGURATION "USE AS REGULAR IO"
+set_global_assignment -name RESERVE_DATA0_AFTER_CONFIGURATION "USE AS REGULAR IO"
+set_global_assignment -name RESERVE_DATA1_AFTER_CONFIGURATION "USE AS REGULAR IO"
+set_global_assignment -name RESERVE_FLASH_NCE_AFTER_CONFIGURATION "USE AS REGULAR IO"
+
+set_location_assignment PIN_86 -to dac[0]
+set_location_assignment PIN_85 -to dac[1]
+set_location_assignment PIN_83 -to dac[2]
+set_location_assignment PIN_80 -to dac[3]
+set_location_assignment PIN_77 -to dac[4]
+set_location_assignment PIN_72 -to dac[5]
+set_location_assignment PIN_69 -to dac[6]
+set_location_assignment PIN_67 -to dac[7]
+set_location_assignment PIN_65 -to dac[8]
+set_location_assignment PIN_64 -to dac[9]
+set_location_assignment PIN_59 -to dac[10]
+set_location_assignment PIN_49 -to dac[11]
+set_location_assignment PIN_51 -to dac[12]
+set_location_assignment PIN_50 -to dac[13]
+set_location_assignment PIN_44 -to dac[14]
+set_location_assignment PIN_42 -to dac[15]
+set_location_assignment PIN_100 -to DRAM_ADDR[11]
+set_location_assignment PIN_28 -to DRAM_ADDR[10]
+set_location_assignment PIN_105 -to DRAM_ADDR[9]
+set_location_assignment PIN_103 -to DRAM_ADDR[8]
+set_location_assignment PIN_110 -to DRAM_ADDR[7]
+set_location_assignment PIN_112 -to DRAM_ADDR[6]
+set_location_assignment PIN_114 -to DRAM_ADDR[5]
+set_location_assignment PIN_119 -to DRAM_ADDR[4]
+set_location_assignment PIN_4 -to DRAM_ADDR[3]
+set_location_assignment PIN_6 -to DRAM_ADDR[2]
+set_location_assignment PIN_7 -to DRAM_ADDR[1]
+set_location_assignment PIN_8 -to DRAM_ADDR[0]
+set_location_assignment PIN_31 -to DRAM_BA_0
+set_location_assignment PIN_30 -to DRAM_BA_1
+set_location_assignment PIN_144 -to DRAM_CAS_N
+set_location_assignment PIN_99 -to DRAM_CLK
+set_location_assignment PIN_120 -to DRAM_DQ[15]
+set_location_assignment PIN_115 -to DRAM_DQ[14]
+set_location_assignment PIN_113 -to DRAM_DQ[13]
+set_location_assignment PIN_111 -to DRAM_DQ[12]
+set_location_assignment PIN_101 -to DRAM_DQ[11]
+set_location_assignment PIN_104 -to DRAM_DQ[10]
+set_location_assignment PIN_106 -to DRAM_DQ[9]
+set_location_assignment PIN_87 -to DRAM_DQ[8]
+set_location_assignment PIN_141 -to DRAM_DQ[7]
+set_location_assignment PIN_137 -to DRAM_DQ[6]
+set_location_assignment PIN_136 -to DRAM_DQ[5]
+set_location_assignment PIN_135 -to DRAM_DQ[4]
+set_location_assignment PIN_133 -to DRAM_DQ[3]
+set_location_assignment PIN_132 -to DRAM_DQ[2]
+set_location_assignment PIN_125 -to DRAM_DQ[1]
+set_location_assignment PIN_121 -to DRAM_DQ[0]
+set_location_assignment PIN_142 -to DRAM_LDQM
+set_location_assignment PIN_32 -to DRAM_RAS_N
+set_location_assignment PIN_98 -to DRAM_UDQM
+set_location_assignment PIN_143 -to DRAM_WE_N
+set_location_assignment PIN_55 -to clk_14
+set_location_assignment PIN_126 -to clk_28
+set_location_assignment PIN_46 -to addbo[7]
+set_location_assignment PIN_52 -to addbi[5]
+set_location_assignment PIN_53 -to addbi[4]
+set_location_assignment PIN_58 -to addbo[6]
+set_location_assignment PIN_60 -to addbo[5]
+set_location_assignment PIN_66 -to addbo[4]
+set_location_assignment PIN_68 -to addbo[3]
+set_location_assignment PIN_71 -to addbo[2]
+set_location_assignment PIN_76 -to addbo[1]
+set_location_assignment PIN_79 -to addbo[0]
+set_location_assignment PIN_88 -to addbi[3]
+set_location_assignment PIN_89 -to addbi[2]
+set_location_assignment PIN_90 -to addbi[1]
+set_location_assignment PIN_91 -to addbi[0]
+set_location_assignment PIN_129 -to mdb[7]
+set_location_assignment PIN_128 -to mdb[6]
+set_location_assignment PIN_127 -to mdb[5]
+set_location_assignment PIN_13 -to mdb[4]
+set_location_assignment PIN_22 -to mdb[3]
+set_location_assignment PIN_23 -to mdb[2]
+set_location_assignment PIN_24 -to mdb[1]
+set_location_assignment PIN_25 -to mdb[0]
+set_location_assignment PIN_10 -to sigma1
+set_location_assignment PIN_11 -to sigma2
+set_location_assignment PIN_33 -to nHSync
+set_location_assignment PIN_39 -to nVSync
+
+
+set_global_assignment -name GENERATE_RBF_FILE ON
+set_global_assignment -name AUTO_RAM_BLOCK_BALANCING OFF
+set_global_assignment -name ALLOW_POWER_UP_DONT_CARE OFF
+set_global_assignment -name USE_SIGNALTAP_FILE stp1.stp
+set_global_assignment -name ENABLE_SIGNALTAP OFF
+set_global_assignment -name RESERVE_ALL_UNUSED_PINS_WEAK_PULLUP "AS INPUT TRI-STATED"
+set_global_assignment -name STRATIX_DEVICE_IO_STANDARD "3.3-V LVTTL"
+set_global_assignment -name OUTPUT_IO_TIMING_ENDPOINT "FAR END"
+set_global_assignment -name FMAX_REQUIREMENT "114 MHz"
+set_global_assignment -name OPTIMIZE_MULTI_CORNER_TIMING ON
+set_global_assignment -name MISC_FILE "C:/_fpga/_cone/C1Extender/C1extender/Extender.dpf"
+set_global_assignment -name CYCLONEII_OPTIMIZATION_TECHNIQUE SPEED
+set_global_assignment -name TPD_REQUIREMENT "2 ns"
+set_global_assignment -name TSU_REQUIREMENT "2 ns"
+set_global_assignment -name TCO_REQUIREMENT "2 ns"
+set_global_assignment -name TH_REQUIREMENT "2 ns"
+set_global_assignment -name SIMULATION_MODE FUNCTIONAL
+set_location_assignment PIN_54 -to acexclk
+set_global_assignment -name MISC_FILE "C:/_fpga/_cone/minimig090911/Extender.dpf"
+set_location_assignment PIN_43 -to IOclk
+set_global_assignment -name SYNTH_TIMING_DRIVEN_SYNTHESIS OFF
+set_global_assignment -name AHDL_FILE JBboot.tdf
+set_global_assignment -name VERILOG_FILE minimig/Userio.v
+set_global_assignment -name VERILOG_FILE minimig/ActionReplay3.v
+set_global_assignment -name VERILOG_FILE minimig/Agnus.v
+set_global_assignment -name VERILOG_FILE minimig/Amber.v
+set_global_assignment -name VERILOG_FILE minimig/Audio.v
+set_global_assignment -name VERILOG_FILE minimig/Beamcounter.v
+set_global_assignment -name VERILOG_FILE minimig/Bitplanes.v
+set_global_assignment -name VERILOG_FILE minimig/Blitter.v
+set_global_assignment -name VERILOG_FILE minimig/CIA8520.v
+set_global_assignment -name VERILOG_FILE minimig/Clock.v
+set_global_assignment -name VERILOG_FILE minimig/Copper.v
+set_global_assignment -name VERILOG_FILE minimig/Denise.v
+set_global_assignment -name VERILOG_FILE minimig/Floppy.v
+set_global_assignment -name VERILOG_FILE minimig/Gary.v
+set_global_assignment -name VERILOG_FILE minimig/Gayle.v
+set_global_assignment -name VERILOG_FILE minimig/Minimig1.v
+set_global_assignment -name VERILOG_FILE minimig/Paula.v
+set_global_assignment -name VERILOG_FILE minimig/PS2Keyboard.v
+set_global_assignment -name VERILOG_FILE minimig/Sprites.v
+set_global_assignment -name AHDL_FILE ntscclk.tdf
+set_global_assignment -name AHDL_FILE palclk.tdf
+set_global_assignment -name VHDL_FILE cfide.vhd
+set_global_assignment -name VHDL_FILE cyclone.vhd
+set_global_assignment -name BDF_FILE Extender.bdf
+set_global_assignment -name VHDL_FILE sdram.vhd
+set_global_assignment -name VHDL_FILE startram.vhd
+set_global_assignment -name VHDL_FILE TG68.vhd
+set_global_assignment -name VHDL_FILE TG68_fast.vhd
+set_instance_assignment -name PARTITION_HIERARCHY root_partition -to | -section_id Top

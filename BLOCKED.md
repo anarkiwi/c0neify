@@ -25,5 +25,5 @@ relative to the repo root; `scripts/check_assets.sh` shows current state.
 | Synthesis toolchain | `reference/QuartusSetupWeb-13.1.0.162.run` + `cyclone_web-13.1.0.162.qdz`, installed by `scripts/install_quartus.sh` |
 | NewBoot CF layout | `reference/NewbootV201.zip`: card root, `c1dcores/<core>/` with `select.raw`/`select.txt`, bypass `extender.rbf` (`docs/hardware.md`) |
 | ACEX 1K toolchain | `reference/90_quartus_free.exe`: `scripts/build_acex.sh` rebuilds Minimig's 1k30 byte-identical to `support.bin`; EP1K100QC208-3 fits ([acex_toolchain.md](docs/acex_toolchain.md)) |
-| Minimig protocol comparison | `reference/C1minimigV201_source.zip` (`docs/protocol_decision.md`) |
-| Extender side of Minimig's link, cycle for cycle | `reference/C1minimigV201_source.zip`: `scripts/sim.sh` runs `tb_mmlink` against the extracted `1k30/acex.vhd` (`acex_*` cases) |
+| Minimig protocol comparison | `third_party/C1minimigV201_source/` (`docs/protocol_decision.md`) |
+| Extender side of Minimig's link, cycle for cycle | `third_party/C1minimigV201_source/1k30/acex.vhd`: `scripts/sim.sh` runs `tb_mmlink` against it (`acex_*` cases) |

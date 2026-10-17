@@ -67,7 +67,7 @@ scripts/lint_core.sh "$CORE" "$PROJECT"
 ((INIT_ONLY)) && exit 0
 
 step "Quartus compile"
-make -s -C "$CORE" compile BOARD="$BOARD"
+scripts/quartus_run.sh make -s -C "$CORE" compile BOARD="$BOARD"
 RBF=$CORE/$BOARD/output_files/${PROJECT}_${BOARD}.rbf
 ls -l "$RBF"
 

@@ -55,8 +55,9 @@ scripts/build_acex.sh --out build/acex_smoke docker/quartus90/smoke ep1k100
 ## Minimig 1k30 rebuild
 
 ```
-mkdir -p build/minimig && cd build/minimig
-unzip -o ../../reference/C1minimigV201_source.zip '1k30/*'
+mkdir -p build/minimig && cp -r third_party/C1minimigV201_source/1k30 build/minimig/
+cd build/minimig
+unzip -o ../../reference/C1minimigV201_source.zip 1k30/gdemux.tdf 1k30/ehle.rbf
 unzip -o ../../reference/C1minimigV201_build.zip v2.01/c1dcores/minimig/support.bin
 cd ../..
 scripts/build_acex.sh --out build/minimig/out \

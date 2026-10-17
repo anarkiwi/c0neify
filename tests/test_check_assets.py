@@ -35,7 +35,7 @@ def test_manifest_covers_expected_assets():
     assert len(NAMES) == len(set(NAMES))
     assert all(len(row) == 5 and all(row) for row in MANIFEST)
     assert {row[1] for row in MANIFEST} <= {"text", "pdf", "zip", "elf", "exe", "deb"}
-    assert {row[2] for row in MANIFEST} == {"required", "optional"}
+    assert {row[2] for row in MANIFEST} == {"required", "optional", "vendored"}
     for name in (
         "C1schematics.pdf",
         "C1_extender.pin",

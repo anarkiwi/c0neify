@@ -54,7 +54,7 @@ done
 step "GHDL: VHDL-93 analysis of 1k30-shared files"
 ghdl -a --std=93 --workdir="$W/work93" "${VHDL93[@]}"
 
-mapfile -t OWN_VLOG < <(git ls-files -- '*.v' '*.sv' ':!:DeMiSTify/**' ':!:cores/**')
+mapfile -t OWN_VLOG < <(git ls-files -- '*.v' '*.sv' ':!:DeMiSTify/**' ':!:cores/**' ':!:third_party/**')
 if ((${#OWN_VLOG[@]})); then
 	step "Verilator lint: ${#OWN_VLOG[@]} files"
 	verilator --lint-only -Wall "${OWN_VLOG[@]}"

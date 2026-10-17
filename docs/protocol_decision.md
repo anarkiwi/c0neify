@@ -11,7 +11,8 @@ transfers through the IDE tunnel. **Implemented** as
 ([minimig_link.md](minimig_link.md)); `cone_io` and its 1k30 slave are
 kept in `fallback/`.
 
-Citations: `src:` = `reference/C1minimigV201_source.zip`, `build:` =
+Citations: `src:` = `third_party/C1minimigV201_source/` (from
+`C1minimigV201_source.zip`; `1k30/gdemux.tdf` only in the archive), `build:` =
 `reference/C1minimigV201_build.zip`, `M:` = `reference/Cone_core_development.pdf`
 (text line numbers from `pdftotext`).
 
@@ -100,8 +101,8 @@ New extender module (for example `cone_minimig_io`) implementing
     it is harder to upstream. It could be a build-time option.
   * The extender must reproduce Minimig's cycle counts exactly: two-cycle
     latency, close and wait counts, slot order, and sync lock. Simulating
-    it against the real `acex.vhd` is possible only while
-    `reference/C1minimigV201_source.zip` is present (asset-gated sim).
+    it against the real `acex.vhd` runs in every simulation
+    (`third_party/C1minimigV201_source/1k30/acex.vhd`).
   * The audio path moves from the guest's sigma-delta pins to the
     serialised DAC stream (`AUDIO_L/R` would need the guest's parallel
     `DAC_L/R` outputs, which BBC has).

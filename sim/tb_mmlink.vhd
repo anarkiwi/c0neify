@@ -1,6 +1,6 @@
 -- tb_mmlink: cone_sd_ata + cone_mm_link on the extender, a 1k30 running
 -- either sim/models/k30_mm_model.vhd or Minimig's own 1k30/acex.vhd
--- (K30_REAL, extracted from reference/C1minimigV201_source.zip by
+-- (K30_REAL, third_party/C1minimigV201_source/1k30/acex.vhd prepared by
 -- scripts/sim.sh), an ATA device on the 1k30's IDE pins, PS/2 devices,
 -- and the CPLD joystick stream.
 --
