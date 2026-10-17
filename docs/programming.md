@@ -53,7 +53,8 @@ Consequences for a design:
 ### Reconfiguring the 1k30 from the 1k100
 
 M§4.4 and M§5, implemented in `reconfig1k30_example.zip`
-(`rtl/cone_reconfig1k30.vhd`, LGPL-3, about 200 LEs):
+(`third_party/reconfig1k30_example/rtl/cone_reconfig1k30.vhd`, LGPL-3,
+about 200 LEs):
 
 1. cselect `0110b`, A3 A2 = `00`: clear the 3032's flash address, which
    drives the 1k30's CONF_DONE low.
@@ -88,7 +89,7 @@ stay stable 500 ns after deselecting (M§5).
 | PS/2 keyboard, mouse | 1k30 (pins 203/202, 200/199) and 1k100 (70/69, 68/67) | extender only through the 1k30 (Minimig's link carries both). Clock and data are swapped in the schematic | M§10 |
 | Joysticks | 1k100 (via the 7064's serial stream on ioshift, 1k100 pin 174, one bit per pclk) | 16-bit frame with a 0 sync bit; extender gets them through GBridge gb[5] → 1k30 → link | M§7.3, `Gbridge.tdf:124-135` |
 | SID 1, SID 2 | 1k30 alone, or the 1k100 if the 1k30 supplies the clock | 74LS138 Y6/Y7 (cselect `0011b`/`0111b`) to SID nCS; wr to nWR, mdb to D0–7, a[4:0] to A0–4, nreset to nRES; both φ2 pins on net `1mhz`, driven by 1k30 pin 150 | sch:p1, sch:p9, `A1k30.pin`, M§11 |
-| CF / IDE | 1k30 | extender through Minimig's IDE tunnel (`cone_sd_ata`) | `C1minimigV201_source.zip` `1k30/acex.vhd` |
+| CF / IDE | 1k30 | extender through Minimig's IDE tunnel (`cone_sd_ata`) | `third_party/C1minimigV201_source/1k30/acex.vhd` |
 | IEC | 1k100 | 7064 register cselect `1011b`, bits 3/4/5 = ATN/CLK/DATA (1 = pull low), written on pclk's falling edge. pclk exists only on 1k100 pin 168. ATN is output-only and SRQ-IN is unreadable, so drive emulation on this port is impossible | M§7.1, M§7.6 |
 | Cartridge port | 1k100 (a[15:0]); the 1k30 can raise ROML/ROMH/IO1/IO2 but has only a[4:0] | 74LS138 Y0/Y1/Y5/Y4 (ROML/ROMH/IO1/IO2); BA needs the BA mod (R72 removed, wire to PCI data bit 1) | sch:p9, M§12.1 |
 | Printer port | 1k100 | 7064 `1001b`/`1010b`, strobe in the IEC register | M§7.2, M§7.5 |
@@ -149,7 +150,8 @@ the extender's sigma pins. `scripts/build_core.sh`; card steps in
 
 ### Extender core plus a custom 1k30 (adds the real SIDs)
 
-1. Extract `1k30/` from `C1minimigV201_source.zip` and rebuild it with
+1. Take `1k30/` from `third_party/C1minimigV201_source/` plus
+   `gdemux.tdf` from `C1minimigV201_source.zip` and rebuild it with
    `scripts/build_acex.sh`; the result must be byte-identical to
    `support.bin` before any change ([acex_toolchain.md](acex_toolchain.md)).
 2. Add a SID write path: the extender sends register writes over a spare
@@ -176,7 +178,7 @@ Each step needs only what the previous one proved.
 | Step | Card contents | Proves | Expected |
 |---|---|---|---|
 | 1 | NewBoot V2.01 as shipped | board, CF, bypass video | NewBoot menu on VGA |
-| 2 | `cone_800x600_test_v3.zip` `800x600/` as a core directory (add any `select.raw`) | extender configuration, clk28 + PLL, VGA DAC, open-collector syncs | 800×600 colour bars |
+| 2 | `third_party/cone_800x600_test_v3/800x600/` as a core directory (add any `select.raw`) | extender configuration, clk28 + PLL, VGA DAC, open-collector syncs | 800×600 colour bars |
 | 3 | Minimig V2.01 (`C1minimigV201_build.zip`) | the prebuilt `support.rbf`/`support.bin` and the link on this board | Minimig's on-screen menu, keyboard works |
 | 4 | BBC cone_ext (`scripts/build_core.sh`) | `cone_mm_link`, `cone_sd_ata`, SDRAM, DeMiSTify firmware | BBC boots `BBC.ROM` from CF; keyboard, joystick fire |
 | 5 | rebuilt Minimig 1k30 as `support.bin` | the ACEX toolchain on hardware | identical behaviour to step 3 |
@@ -187,20 +189,22 @@ first suspect (`BLOCKED.md` #3).
 ## Reference archives
 
 All in `reference/` (gitignored; `scripts/check_assets.sh`). Commodore
-ROMs inside some archives must never be committed.
+ROMs inside some archives must never be committed. The files this repo
+uses from the GPL/LGPL archives are vendored in
+[third_party/](../third_party/README.md).
 
 | Archive | Contents | Licence |
 |---|---|---|
 | `Cone_core_development.pdf` | the manual | – |
 | `C1schematics.pdf`, `C1_extender_schem.pdf` | main board and extender schematics | – |
 | `A1k30.pin`, `A1k100.pin`, `C1_extender.pin` | fitted pin reports | – |
-| `C1minimigV201_source.zip` | Minimig extender, 1k30 (`1k30/`, builds to `support.bin`) | GPL-3, TG68 LGPL |
+| `C1minimigV201_source.zip` | Minimig extender, 1k30 (`1k30/`, builds to `support.bin`); partly vendored | GPL-3, TG68 LGPL; `1k30/gdemux.tdf` all rights reserved |
 | `C1minimigV201_build.zip` | Minimig V2.01 card files | GPL-3 |
 | `Minimig_source211108.zip` | Minimig 2008 source (extender, 1k30, NTSC) | GPL-3 |
 | `Snapshot_ver1.26.zip`, `Symb_cpc_source.zip` | Minimig snapshot, SymbOS CPC: extender + 1k30 projects | GPL |
 | `Gbridge.tdf` | GBridge, 1k100 side | BSD-style (Gubener) |
-| `reconfig1k30_example.zip` | 1k100 reconfiguration of the 1k30 | LGPL-3 (Wendrich) |
-| `cone_800x600_test_v3.zip` | extender VGA test, source and `extender.rbf` | LGPL-3 (Wendrich) |
+| `reconfig1k30_example.zip` | 1k100 reconfiguration of the 1k30; vendored | LGPL-3 (Wendrich) |
+| `cone_800x600_test_v3.zip` | extender VGA test, source and `extender.rbf`; vendored | LGPL-3 (Wendrich) |
 | `VC20_V12.zip`, `Bigpicview.zip`, `Picview.zip`, `Pong_chapter1.zip` | 1k100 projects with GBridge or gbmux | per file |
 | `fpga64_029.zip` | FPGA-64 0.29 card files (`support.rbf`, `target.rbf`, loader `boot.bin`, Commodore ROMs); no source | – |
 | `NewbootV201.zip` | NewBoot V2.01 card | – |

@@ -1,0 +1,220 @@
+# Copyright (C) 1991-2005 Altera Corporation
+# Your use of Altera Corporation's design tools, logic functions 
+# and other software and tools, and its AMPP partner logic       
+# functions, and any output files any of the foregoing           
+# (including device programming or simulation files), and any    
+# associated documentation or information are expressly subject  
+# to the terms and conditions of the Altera Program License      
+# Subscription Agreement, Altera MegaCore Function License       
+# Agreement, or other applicable license agreement, including,   
+# without limitation, that your use is for the sole purpose of   
+# programming logic devices manufactured by Altera and sold by   
+# Altera or its authorized distributors.  Please refer to the    
+# applicable agreement for further details.
+
+
+# The default values for assignments are stored in the file
+#		ehle_assignment_defaults.qdf
+# If this file doesn't exist, and for assignments not listed, see file
+#		assignment_defaults.qdf
+
+# Altera recommends that you do not modify this file. This
+# file is updated automatically by the Quartus II software
+# and any changes you make may be lost or overwritten.
+
+
+# Project-Wide Assignments
+# ========================
+set_global_assignment -name ORIGINAL_QUARTUS_VERSION 5.0
+set_global_assignment -name PROJECT_CREATION_TIME_DATE "22:17:11  MAY 12, 2005"
+set_global_assignment -name LAST_QUARTUS_VERSION 9.0
+
+# Pin & Location Assignments
+# ==========================
+set_global_assignment -name RESERVE_PIN "AS INPUT TRI-STATED"
+set_location_assignment PIN_10 -to 1K100cs
+set_location_assignment PIN_150 -to 1MHz
+set_location_assignment PIN_184 -to 2MHz
+set_location_assignment PIN_16 -to DMA
+set_location_assignment PIN_163 -to a[0]
+set_location_assignment PIN_167 -to a[1]
+set_location_assignment PIN_168 -to a[2]
+set_location_assignment PIN_169 -to a[3]
+set_location_assignment PIN_25 -to a[4]
+set_location_assignment PIN_7 -to adac_data
+set_location_assignment PIN_88 -to bank0_a[0]
+set_location_assignment PIN_96 -to bank0_a[10]
+set_location_assignment PIN_113 -to bank0_a[11]
+set_location_assignment PIN_89 -to bank0_a[1]
+set_location_assignment PIN_90 -to bank0_a[2]
+set_location_assignment PIN_92 -to bank0_a[3]
+set_location_assignment PIN_93 -to bank0_a[4]
+set_location_assignment PIN_94 -to bank0_a[5]
+set_location_assignment PIN_95 -to bank0_a[6]
+set_location_assignment PIN_112 -to bank0_a[7]
+set_location_assignment PIN_114 -to bank0_a[8]
+set_location_assignment PIN_115 -to bank0_a[9]
+set_location_assignment PIN_120 -to bank0_cas
+set_location_assignment PIN_71 -to bank0_d[0]
+set_location_assignment PIN_128 -to bank0_d[10]
+set_location_assignment PIN_132 -to bank0_d[11]
+set_location_assignment PIN_134 -to bank0_d[12]
+set_location_assignment PIN_139 -to bank0_d[13]
+set_location_assignment PIN_141 -to bank0_d[14]
+set_location_assignment PIN_143 -to bank0_d[15]
+set_location_assignment PIN_73 -to bank0_d[16]
+set_location_assignment PIN_75 -to bank0_d[17]
+set_location_assignment PIN_85 -to bank0_d[18]
+set_location_assignment PIN_87 -to bank0_d[19]
+set_location_assignment PIN_74 -to bank0_d[1]
+set_location_assignment PIN_99 -to bank0_d[20]
+set_location_assignment PIN_101 -to bank0_d[21]
+set_location_assignment PIN_103 -to bank0_d[22]
+set_location_assignment PIN_111 -to bank0_d[23]
+set_location_assignment PIN_125 -to bank0_d[24]
+set_location_assignment PIN_127 -to bank0_d[25]
+set_location_assignment PIN_131 -to bank0_d[26]
+set_location_assignment PIN_133 -to bank0_d[27]
+set_location_assignment PIN_135 -to bank0_d[28]
+set_location_assignment PIN_136 -to bank0_d[29]
+set_location_assignment PIN_83 -to bank0_d[2]
+set_location_assignment PIN_140 -to bank0_d[30]
+set_location_assignment PIN_142 -to bank0_d[31]
+set_location_assignment PIN_86 -to bank0_d[3]
+set_location_assignment PIN_97 -to bank0_d[4]
+set_location_assignment PIN_100 -to bank0_d[5]
+set_location_assignment PIN_102 -to bank0_d[6]
+set_location_assignment PIN_104 -to bank0_d[7]
+set_location_assignment PIN_122 -to bank0_d[8]
+set_location_assignment PIN_126 -to bank0_d[9]
+set_location_assignment PIN_119 -to bank0_ras0
+set_location_assignment PIN_116 -to bank0_ras1
+set_location_assignment PIN_121 -to bank0_we
+set_location_assignment PIN_29 -to cselects[0]
+set_location_assignment PIN_30 -to cselects[1]
+set_location_assignment PIN_31 -to cselects[2]
+set_location_assignment PIN_27 -to cselects[3]
+set_location_assignment PIN_36 -to gb[0]
+set_location_assignment PIN_37 -to gb[1]
+set_location_assignment PIN_38 -to gb[2]
+set_location_assignment PIN_39 -to gb[3]
+set_location_assignment PIN_40 -to gb[4]
+set_location_assignment PIN_41 -to gb[5]
+set_location_assignment PIN_44 -to gb[6]
+set_location_assignment PIN_45 -to gbo[7]
+set_location_assignment PIN_198 -to h_sync
+set_location_assignment PIN_196 -to ide1cs
+set_location_assignment PIN_195 -to ide2cs
+set_location_assignment PIN_148 -to idea[0]
+set_location_assignment PIN_147 -to idea[1]
+set_location_assignment PIN_144 -to idea[2]
+set_location_assignment PIN_70 -to idedb[0]
+set_location_assignment PIN_57 -to idedb[10]
+set_location_assignment PIN_60 -to idedb[11]
+set_location_assignment PIN_62 -to idedb[12]
+set_location_assignment PIN_64 -to idedb[13]
+set_location_assignment PIN_67 -to idedb[14]
+set_location_assignment PIN_69 -to idedb[15]
+set_location_assignment PIN_68 -to idedb[1]
+set_location_assignment PIN_65 -to idedb[2]
+set_location_assignment PIN_63 -to idedb[3]
+set_location_assignment PIN_61 -to idedb[4]
+set_location_assignment PIN_58 -to idedb[5]
+set_location_assignment PIN_56 -to idedb[6]
+set_location_assignment PIN_54 -to idedb[7]
+set_location_assignment PIN_53 -to idedb[8]
+set_location_assignment PIN_55 -to idedb[9]
+set_location_assignment PIN_46 -to iord
+set_location_assignment PIN_47 -to iowr
+set_location_assignment PIN_203 -to keyboard_clk
+set_location_assignment PIN_202 -to keyboard_data
+set_location_assignment PIN_8 -to lrclk
+set_location_assignment PIN_160 -to mdb[0]
+set_location_assignment PIN_157 -to mdb[1]
+set_location_assignment PIN_158 -to mdb[2]
+set_location_assignment PIN_159 -to mdb[3]
+set_location_assignment PIN_161 -to mdb[4]
+set_location_assignment PIN_162 -to mdb[5]
+set_location_assignment PIN_164 -to mdb[6]
+set_location_assignment PIN_166 -to mdb[7]
+set_location_assignment PIN_205 -to nC1K100
+set_location_assignment PIN_182 -to nreset
+set_location_assignment PIN_197 -to v_sync
+set_location_assignment PIN_193 -to addbo[0]
+set_location_assignment PIN_192 -to addbo[1]
+set_location_assignment PIN_191 -to addbo[2]
+set_location_assignment PIN_190 -to addbo[3]
+set_location_assignment PIN_189 -to addbi[0]
+set_location_assignment PIN_187 -to addbi[1]
+set_location_assignment PIN_186 -to addbi[2]
+set_location_assignment PIN_180 -to addbi[3]
+set_location_assignment PIN_179 -to addbi[4]
+set_location_assignment PIN_177 -to addbi[5]
+set_location_assignment PIN_176 -to addbi[6]
+set_location_assignment PIN_175 -to addo_clk
+set_location_assignment PIN_174 -to addbo[4]
+set_location_assignment PIN_173 -to addbo[5]
+set_location_assignment PIN_172 -to addbi[7]
+set_location_assignment PIN_170 -to addbi[8]
+set_location_assignment PIN_206 -to wr
+set_location_assignment PIN_207 -to CS
+set_location_assignment PIN_17 -to TxD
+set_location_assignment PIN_15 -to RxD
+set_location_assignment PIN_79 -to sysclk
+
+# Timing Assignments
+# ==================
+set_global_assignment -name IGNORE_CLOCK_SETTINGS ON
+set_global_assignment -name TPD_REQUIREMENT "5 ns"
+set_global_assignment -name TSU_REQUIREMENT "5 ns"
+set_global_assignment -name TCO_REQUIREMENT "5 ns"
+set_global_assignment -name TH_REQUIREMENT "5 ns"
+set_global_assignment -name FMAX_REQUIREMENT "100 MHz"
+
+# Analysis & Synthesis Assignments
+# ================================
+set_global_assignment -name DEVICE_FILTER_PIN_COUNT 208
+set_global_assignment -name DEVICE_FILTER_SPEED_GRADE 3
+set_global_assignment -name FAMILY ACEX1K
+set_global_assignment -name ALLOW_POWER_UP_DONT_CARE OFF
+set_global_assignment -name FLEX10K_OPTIMIZATION_TECHNIQUE SPEED
+set_global_assignment -name AUTO_OPEN_DRAIN_PINS ON
+set_global_assignment -name AUTO_ROM_RECOGNITION ON
+set_global_assignment -name AUTO_RAM_RECOGNITION ON
+set_global_assignment -name TOP_LEVEL_ENTITY bbfast
+
+# Fitter Assignments
+# ==================
+set_global_assignment -name DEVICE "EP1K30QC208-3"
+set_global_assignment -name RESERVE_ALL_UNUSED_PINS "AS INPUT TRI-STATED"
+set_global_assignment -name OPTIMIZE_HOLD_TIMING OFF
+set_global_assignment -name OPTIMIZE_TIMING "NORMAL COMPILATION"
+set_global_assignment -name FITTER_EFFORT "STANDARD FIT"
+set_global_assignment -name ERROR_CHECK_FREQUENCY_DIVISOR 1701603654
+set_global_assignment -name FLEX10K_DEVICE_IO_STANDARD LVTTL/LVCMOS
+
+# Assembler Assignments
+# =====================
+set_global_assignment -name ON_CHIP_BITSTREAM_DECOMPRESSION OFF
+set_global_assignment -name GENERATE_RBF_FILE ON
+
+set_global_assignment -name AUTO_PACKED_REGISTERS "MINIMIZE AREA"
+set_global_assignment -name ROUTER_TIMING_OPTIMIZATION_LEVEL MAXIMUM
+set_global_assignment -name SMART_RECOMPILE OFF
+
+set_location_assignment PIN_208 -to 1K100ncs
+set_global_assignment -name ADD_DEFAULT_PINS_TO_SIMULATION_OUTPUT_WAVEFORMS OFF
+set_location_assignment PIN_183 -to hostclk
+set_global_assignment -name SAVE_DISK_SPACE OFF
+set_location_assignment PIN_26 -to addon
+set_location_assignment PIN_200 -to mice_clk
+set_location_assignment PIN_199 -to mice_data
+set_global_assignment -name VHDL_FILE acex.vhd
+set_global_assignment -name AHDL_FILE gdemux.tdf
+set_global_assignment -name BDF_FILE bbfast.bdf
+set_global_assignment -name USE_CONFIGURATION_DEVICE ON
+set_global_assignment -name RESERVE_ALL_UNUSED_PINS_NO_OUTPUT_GND "AS INPUT TRI-STATED"
+set_global_assignment -name MISC_FILE "C:/_fpga/_cone/C1Extender/1k30/ehle.dpf"
+set_location_assignment PIN_204 -to nIrq
+set_location_assignment PIN_24 -to ide0cs
+set_global_assignment -name MISC_FILE "C:/_fpga/_cone/minimig090911/1k30/ehle.dpf"

@@ -6,7 +6,7 @@ A1k100.pin	text	required	iComp wiki, C-One page	1k100 support core pins
 A1k30.pin	text	required	iComp wiki, C-One page	1k30 mux slave pins
 Gbridge.tdf	text	required	iComp wiki, C-One page	1k100/1k30 gb[] bridge reference
 C1schematics.pdf	pdf	required	iComp wiki, C-One page	PS/2, CPLD and IDE/CF wiring on the main board
-C1minimigV201_source.zip	zip	required	iComp wiki, C-One page	protocol comparison with Minimig, support core sources
+C1minimigV201_source.zip	zip	vendored	iComp wiki, C-One page	provenance of third_party/C1minimigV201_source; 1k30/gdemux.tdf for the 1k30 rebuild
 C1minimigV201_build.zip	zip	required	iComp wiki, C-One page	prebuilt support.rbf / support.bin (make_cfcard.sh)
 NewbootV201.zip	zip	required	iComp wiki, File:NewbootV201.zip page, download link	NewBoot CF card layout
 QuartusSetupWeb-13.1.0.162.run	elf	required	Intel FPGA download centre, Archives, Quartus II Web Edition 13.1, Individual Files	synthesis (install_quartus.sh)
@@ -23,6 +23,6 @@ VC20_V12.zip	zip	optional	iComp wiki / syntiac.com C-One downloads	1k100 VIC-20 
 Bigpicview.zip	zip	optional	iComp wiki / syntiac.com C-One downloads	1k100 project with GBridge and SDRAM
 Picview.zip	zip	optional	iComp wiki / syntiac.com C-One downloads	1k100 project with GBridge
 Pong_chapter1.zip	zip	optional	iComp wiki / syntiac.com C-One downloads	1k100 project with gbmux
-reconfig1k30_example.zip	zip	optional	iComp wiki / syntiac.com C-One downloads	1k100 reconfiguration of the 1k30 (cone_reconfig1k30)
-cone_800x600_test_v3.zip	zip	optional	iComp wiki / syntiac.com C-One downloads	extender VGA test core, bring-up step 2
+reconfig1k30_example.zip	zip	vendored	iComp wiki / syntiac.com C-One downloads	provenance of third_party/reconfig1k30_example
+cone_800x600_test_v3.zip	zip	vendored	iComp wiki / syntiac.com C-One downloads	provenance of third_party/cone_800x600_test_v3
 fpga64_029.zip	zip	optional	iComp wiki / syntiac.com C-One downloads	FPGA-64 0.29 card files, standard support.rbf loader
