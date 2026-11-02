@@ -35,6 +35,8 @@ if [[ ! -L $CORE/DeMiSTify ]]; then
 	ln -s ../../DeMiSTify "$CORE/DeMiSTify"
 fi
 
+mkdir -p build
+
 step "EightThirtyTwo toolchain"
 make -s -C DeMiSTify -f bootstrap.mk >build/e832.log 2>&1 || {
 	tail -20 build/e832.log

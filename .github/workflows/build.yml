@@ -21,7 +21,7 @@ env:
 
 jobs:
   lint:
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@v7
@@ -32,7 +32,7 @@ jobs:
         uses: actions/cache@v6
         with:
           path: ~/apt-cache
-          key: apt-ubuntu-22.04-${{ hashFiles('.github/apt-packages.txt') }}
+          key: apt-ubuntu-24.04-${{ hashFiles('.github/apt-packages.txt') }}
 
       - name: apt install
         run: |
@@ -75,7 +75,7 @@ jobs:
           path: build/sim/logs/
 
   acex:
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@v7
@@ -97,7 +97,7 @@ jobs:
     if: >-
       (github.event_name == 'push' && github.ref == 'refs/heads/main') ||
       github.event_name == 'workflow_dispatch' || github.event_name == 'schedule'
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     outputs:
       mode: ${{ steps.gate.outputs.mode }}
     steps:
@@ -121,7 +121,7 @@ jobs:
   synth:
     needs: gate
     if: needs.gate.outputs.mode != 'skip'
-    runs-on: ${{ needs.gate.outputs.mode == 'self-hosted' && fromJSON('["self-hosted","quartus"]') || 'ubuntu-22.04' }}
+    runs-on: ${{ needs.gate.outputs.mode == 'self-hosted' && fromJSON('["self-hosted","quartus"]') || 'ubuntu-24.04' }}
     timeout-minutes: 240
     env:
       DOWNLOAD: ${{ needs.gate.outputs.mode == 'download' }}
