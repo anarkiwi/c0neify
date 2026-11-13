@@ -3,14 +3,14 @@
 # Build with scripts/build_acex.sh --image-only; the installer comes in as
 # the named build context "installer" and never enters a layer.
 
-FROM debian:bookworm-slim@sha256:7c7b2c966bc9ee8cedfeef67e0e279108992c77681fa595db4a9d65c06ccc587 AS wine
+FROM debian:bookworm-slim@sha256:734a72b3d6142a71993b4bc580ca01d8ca687f77a2c422d96a961d3376b179bc AS wine
 ENV DEBIAN_FRONTEND=noninteractive
 RUN dpkg --add-architecture i386 \
 	&& apt-get update \
 	&& apt-get install -y --no-install-recommends wine wine32 \
 	&& rm -rf /var/lib/apt/lists/*
 
-FROM debian:bookworm-slim@sha256:7c7b2c966bc9ee8cedfeef67e0e279108992c77681fa595db4a9d65c06ccc587 AS extract
+FROM debian:bookworm-slim@sha256:734a72b3d6142a71993b4bc580ca01d8ca687f77a2c422d96a961d3376b179bc AS extract
 ARG INSTALLER=90_quartus_free.exe
 ARG ACEX_GROUPS="ACEX1K EP1K10 EP1K30 EP1K50 EP1K100"
 ARG KEEP_DEVINFO="acex1k configuration programmer"
